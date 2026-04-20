@@ -1,0 +1,57 @@
+flowchart TD
+    %% --- TEMA WARNA ---
+    classDef fase1 fill:#d4edda,stroke:#155724,stroke-width:2px,color:#000
+    classDef fase2 fill:#cce5ff,stroke:#004085,stroke-width:2px,color:#000
+    classDef fase3 fill:#fff3cd,stroke:#856404,stroke-width:2px,color:#000
+    classDef fase4 fill:#f8d7da,stroke:#721c24,stroke-width:2px,color:#000
+
+    %% ==========================================
+    %% FASE 1: MASTER (DASAR)
+    %% ==========================================
+    subgraph F1 [🟢 FASE 1: MASTER INDEPENDEN]
+        direction TB
+        B1["<b>1. WILAYAH & WEB</b><br/>--------------------------------<br/>• provinsi (Bebas)<br/>• kabupaten (provinsi)<br/>• kecamatan (kabupaten)<br/>• kelurahan (kecamatan)<br/>• web_statistik (Bebas)<br/>• web_berita (Bebas)"]:::fase1
+        
+        B2["<b>2. STRUKTUR ORGANISASI</b><br/>--------------------------------<br/>• busdev_bidang (Bebas)<br/>• bidang_kategori (bidang)<br/>• bidang_link (kategori)<br/>• divisi (Bebas)<br/>• jabatan (divisi + atasan)<br/>• role (Bebas)"]:::fase1
+        
+        B3["<b>3. MASTER AKADEMIK</b><br/>--------------------------------<br/>• kursus (Bebas)<br/>• level (Bebas)<br/>• kursus_level (kursus, level)<br/>• kursus_libur (kursus, libur)<br/>• parameter_nilai (level)<br/>• periode (kursus)"]:::fase1
+    end
+
+    %% ==========================================
+    %% FASE 2: SDM & CORE
+    %% ==========================================
+    subgraph F2 [🔵 FASE 2: SDM & KEMITRAAN]
+        direction TB
+        B4["<b>4. SDM & USERS</b><br/>--------------------------------<br/>• karyawan (Bebas)<br/>• shift_kerja (Bebas)<br/>• <b>users (karyawan, jab, role, bdg)</b><br/>• keluarga_karyawan (karyawan)<br/>• izin_karyawan (karyawan)<br/>• hak_akses (users, divisi)<br/>• absensi (karyawan, verifikasi)<br/>• verifikasi_absensi (Bebas)<br/>• verifikasi_izin (izin, jab, div)<br/>• karyawan_resign (kar, users)<br/>• log_aktivitas (users)<br/>• ttd (Bebas)"]:::fase2
+        
+        B6["<b>6. KEMITRAAN (B2B)</b><br/>--------------------------------<br/>• mitra (prov, kab)<br/>• mitra_progres (mitra, users)<br/>• kemitraan_verifikator (progres, usr)<br/>• mou (users)<br/>• siswa_mitra (mitra)<br/>• siswa_mitra_keluar (sm_mitra)"]:::fase2
+    end
+
+    %% ==========================================
+    %% FASE 3: ADMIN & PENDAFTARAN
+    %% ==========================================
+    subgraph F3 [🟡 FASE 3: ADMIN & CALON SISWA]
+        direction TB
+        B5["<b>5. ADMIN & SARPRAS</b><br/>--------------------------------<br/>• sop_kategori (Bebas)<br/>• sop (kategori)<br/>• surat_keluar (users)<br/>• ver_surat_keluar (surat)<br/>• surat_tugas (users)<br/>• surat_tugas_anggota (stugas, usr)<br/>• peminjaman (users)<br/>• problem (users)<br/>• pengadaan (users)<br/>• admin_sarpas (Bebas)<br/>• syarat_resign (Bebas)"]:::fase3
+        
+        B7["<b>7. REKRUTMEN & PENDAFTARAN</b><br/>--------------------------------<br/>• pengajuan_karyawan (users)<br/>• histori_pengajuan (pengajuan)<br/>• pelamar (pengajuan)<br/>• progres_pelamar (pelamar, users)<br/>• rekrutmen_pelamar (pelamar, users)<br/>• riwayat_pelamar (pelamar)<br/>• calon_siswa (Bebas)<br/>• calon_siswa_akd (csis, krs, lvl, prd)<br/>• calon_siswa_ortu/byr/prs (csis)"]:::fase3
+    end
+
+    %% ==========================================
+    %% FASE 4: OPERASIONAL & RAPOR
+    %% ==========================================
+    subgraph F4 [🔴 FASE 4: SISWA AKTIF & RAPOR]
+        direction TB
+        B8["<b>8. SISWA AKTIF & JADWAL</b><hr/>• siswa (csis, mitra, wilayah)<br/>• siswa_keluar (siswa, krs, tag)<br/>• tag_siswa_keluar (Bebas)<br/>• sesi (Bebas)<br/>• libur (Bebas)<br/>• jadwal (krs, prd, lvl, sesi)<br/>• jadwal_hari/detail/pengajar (jdw)<br/>• jadwal_siswa (siswa, jdw)"]:::fase4
+        
+        B9["<b>9. KBM & RAPOR</b><br/>--------------------------------<br/>• presensi_siswa (jdw_detail, siswa)<br/>• catatan_kelas (jdw, jdw_detail)<br/>• catatan_siswa (jdw, j_det, siswa)<br/>• followup_cs (catatan_siswa, users)<br/>• rapor_format (kursus)<br/>• rapor_siswa (jdw, siswa, prm_nilai)<br/>• rapor_lacak (siswa, jdw, r_file)"]:::fase4
+    end
+
+    %% --- RELASI PANAH ---
+    B2 ==>|Syarat User| B4
+    B1 -.->|Syarat Lokasi| B6
+    B4 ==>|Syarat PIC| B6
+    B4 ==>|Syarat Admin| B5
+    B3 -.->|Syarat Akademik| B7
+    B7 ==>|Konversi Siswa| B8
+    B8 ==>|Jadwal Terbentuk| B9

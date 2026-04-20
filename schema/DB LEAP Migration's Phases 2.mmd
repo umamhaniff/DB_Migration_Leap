@@ -1,0 +1,69 @@
+---
+id: 78205c80-2132-4592-84d3-ff5d8cc8a54a
+---
+flowchart TD
+    %% --- TEMA WARNA ---
+    classDef fase1 fill:#d4edda,stroke:#155724,stroke-width:2px,color:#000
+    classDef fase2 fill:#cce5ff,stroke:#004085,stroke-width:2px,color:#000
+    classDef fase3 fill:#fff3cd,stroke:#856404,stroke-width:2px,color:#000
+    classDef fase4 fill:#f8d7da,stroke:#721c24,stroke-width:2px,color:#000
+
+    %% ==========================================
+    %% FASE 1: MASTER INDEPENDEN (LEVEL 0 & 1)
+    %% ==========================================
+    subgraph F1 [🟢 FASE 1: DATA MASTER & WILAYAH]
+        direction TB
+        B1["<b>1. WILAYAH & WEB</b><br/>--------------------------------<br/>• provinsi (Bebas)<br/>• kabupaten (provinsi)<br/>• kecamatan (kabupaten)<br/>• kelurahan (kecamatan)<br/>• web_statistik (Bebas)<br/>• web_berita (Bebas)"]:::fase1
+        
+        B2["<b>2. SISTEM & ORGANISASI</b><br/>--------------------------------<br/>• roles (Bebas)<br/>• permissions (Bebas)<br/>• role_has_permissions (role, perm)<br/>• divisions (Bebas)<br/>• busdev_bidang (Bebas)<br/>• bidang_kategori (bidang)<br/>• bidang_link (kategori)<br/>• ttd (Bebas)<br/>• migrations (Bebas)"]:::fase1
+        
+        B3["<b>3. AKADEMIK DASAR</b><br/>--------------------------------<br/>• kursus (Bebas)<br/>• level (Bebas)<br/>• sesi (Bebas)<br/>• libur (Bebas)<br/>• topik_diskusi (Bebas)<br/>• kursus_level (kursus, level)<br/>• kursus_libur (kursus, libur)<br/>• parameter_nilai (level)"]:::fase1
+    end
+
+    %% ==========================================
+    %% FASE 2: SDM & KARYAWAN
+    %% ==========================================
+    subgraph F2 [🔵 FASE 2: SDM & PENGGUNA]
+        direction TB
+        B4["<b>4. USERS & KARYAWAN</b><br/>--------------------------------<br/>• users (Bebas)<br/>• shift_kerja (Bebas)<br/>• karyawan (users, shift)<br/>• division_user (user, div, role)<br/>• model_has_roles (user, role)<br/>• model_has_permissions (user, perm)<br/>• keluarga_karyawan (karyawan)<br/>• password_reset_tokens (email)"]:::fase2
+        
+        B5["<b>5. KEHADIRAN & STATUS</b><br/>--------------------------------<br/>• verifikasi_absensi (Bebas)<br/>• izin_karyawan (karyawan)<br/>• absensi (karyawan, izin, ver_abs)<br/>• verifikasi_izin (izin, divisi)<br/>• catatan_mingguan (users)<br/>• karyawan_resign (karyawan, users)<br/>• syarat_resign (Bebas)"]:::fase2
+    end
+
+    %% ==========================================
+    %% FASE 3: OPERASIONAL & CRM
+    %% ==========================================
+    subgraph F3 [🟡 FASE 3: CRM, REKRUTMEN & SARPRAS]
+        direction TB
+        B6["<b>6. CRM (CALON SISWA)</b><br/>--------------------------------<br/>• kontak_prospek (users)<br/>• calon_siswa (kontak, wilayah)<br/>• calon_siswa_akademik (csis, krs, lvl)<br/>• calon_siswa_ortu (calon_siswa)<br/>• calon_siswa_bayar (calon_siswa)<br/>• calon_siswa_jadwal (calon_siswa)<br/>• calon_siswa_kursus (calon_siswa)<br/>• calon_siswa_proses (calon_siswa)<br/>• calon_siswa_status_logs (csis, users)"]:::fase3
+        
+        B7["<b>7. REKRUTMEN & MITRA</b><br/>--------------------------------<br/>• pengajuan_karyawan (users)<br/>• histori_pengajuan (pengajuan)<br/>• pelamar (pengajuan)<br/>• pelamar_kerja/sekolah/kursus (pelamar)<br/>• progres_pelamar (pelamar, users)<br/>• rekrutmen_pelamar (pelamar, users)<br/>• mitra (wilayah)<br/>• mitra_progres (mitra, users)<br/>• kemitraan_verifikator (progres, users)"]:::fase3
+
+        B8["<b>8. ADMIN & SARPRAS</b><br/>--------------------------------<br/>• sop_kategori (Bebas)<br/>• sop (kategori)<br/>• mou (users)<br/>• surat_keluar (users)<br/>• verifikasi_surat_keluar (skeluar)<br/>• surat_tugas (users)<br/>• surat_tugas_anggota (stugas, users)<br/>• peminjaman (users)<br/>• pengadaan (users)<br/>• problem (users)<br/>• admin_sarpras (Bebas)"]:::fase3
+    end
+
+    %% ==========================================
+    %% FASE 4: SISWA AKTIF & RAPOR
+    %% ==========================================
+    subgraph F4 [🔴 FASE 4: OPERASIONAL KBM & RAPOR]
+        direction TB
+        B9["<b>9. SISWA AKTIF & KBM</b><br/>--------------------------------<br/>• siswa (calon, mitra, wilayah)<br/>• kursus_siswa (siswa, kursus)<br/>• tag_siswa_keluar (Bebas)<br/>• siswa_keluar (siswa, kursus, tag)<br/>• periode (kursus)<br/>• jadwal (kursus, periode, level, sesi)<br/>• jadwal_hari (jadwal)<br/>• jadwal_detail (jadwal, mitra, sesi)<br/>• jadwal_pengajar (jadwal, users)<br/>• jadwal_siswa (siswa, jadwal)"]:::fase4
+        
+        B10["<b>10. PENILAIAN & LOG</b><br/>--------------------------------<br/>• presensi_siswa (jdetail, siswa)<br/>• catatan_kelas (jadwal, jdetail)<br/>• catatan_kelas_tag (catatan, topik)<br/>• catatan_siswa (siswa, jadwal, jdetail)<br/>• followup_cs (catatan_siswa, users)<br/>• rapor_format (kursus)<br/>• rapor_format_sub (rformat)<br/>• rapor_format_formula (rformat)<br/>• rapor_format_formula_sub (rsub, level)<br/>• rapor_level_config (lvl, krs, rformat)<br/>• rapor_sub_level (rsub, level)<br/>• rapor_siswa (jadwal, siswa, pnilai)<br/>• rapor_siswa_file (rsiswa)<br/>• rapor_lacak (siswa, jadwal, rfile)"]:::fase4
+
+        B11["<b>11. SYSTEM LOGS</b><br/>--------------------------------<br/>• activity_log (Audit)<br/>• log_aktivitas (Audit User)<br/>• jadwal_detail_logs (Audit Jadwal)<br/>• sessions (Technical)<br/>• cache & cache_locks (Technical)<br/>• jobs & job_batches (Queue)<br/>• failed_jobs (Queue)"]:::fase4
+    end
+
+    %% --- RELASI PANAH INTERAKTIF ---
+    B1 ==>|1. Sediakan Wilayah| B6
+    B1 -.->|Syarat Lokasi Mitra| B7
+    B2 ==>|2. Setup Role & Jabatan| B4
+    B3 ==>|3. Setup Katalog Program| B6
+    B4 ==>|4. Setup Akun Staf| B5
+    B4 ==>|5. PIC Internal| B7
+    B4 ==>|6. Penanggung Jawab| B8
+    B5 -.->|7. Status Kehadiran| B11
+    B6 ==>|8. Konversi Jadi Siswa| B9
+    B7 ==>|9. Data Siswa Kolektif| B9
+    B9 ==>|10. Pelaksanaan Kelas| B10
+    B10 ==>|11. Finalisasi Nilai| B11
