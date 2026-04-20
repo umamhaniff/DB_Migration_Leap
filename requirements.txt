@@ -1,0 +1,8 @@
+# Driver untuk koneksi ke MariaDB/MySQL
+mysql-connector-python==9.0.0
+
+# Untuk keamanan (menyimpan credential database di file .env)
+python-dotenv==1.0.1
+
+# Opsional: Untuk pengolahan data tabular yang lebih kompleks
+pandas==2.2.0
