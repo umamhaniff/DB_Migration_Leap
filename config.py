@@ -19,7 +19,9 @@ def get_db_config():
             'user': os.getenv('DB_USER', 'root'),
             'password': os.getenv('DB_PASS', ''),
             'database': os.getenv('DB_OLD', 'dataleap_v5_example'),
-            'autocommit': True
+            'autocommit': True,
+            'charset': 'utf8mb4',
+            'collation': 'utf8mb4_general_ci'
         },
         'db_new': {
             'host': os.getenv('DB_HOST', 'localhost'),
@@ -27,7 +29,9 @@ def get_db_config():
             'user': os.getenv('DB_USER', 'root'),
             'password': os.getenv('DB_PASS', ''),
             'database': os.getenv('DB_NEW', 'dataleap_v5_migration'),
-            'autocommit': True
+            'autocommit': True,
+            'charset': 'utf8mb4',
+            'collation': 'utf8mb4_general_ci'
         }
     }
 

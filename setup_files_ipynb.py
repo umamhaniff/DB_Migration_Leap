@@ -48,17 +48,18 @@ notebook_template = {
             "source": [
                 "# Connect ke database config\n",
                 "config = get_db_config()\n",
-                "print(f\"Database config loaded: {{config['host']}}\")\n",
+                "# Ambil host dari salah satu config (misal db_old)\n",
+                "print(f'Database config loaded: {config[\"db_old\"][\"host\"]}')\n",
                 "\n",
                 "# Connect ke DB Lama\n",
                 "db_old = mysql.connector.connect(**config['db_old'])\n",
                 "cursor_old = db_old.cursor(dictionary=True)\n",
-                "print(\"Connected to old database\")\n",
+                "print(f'Connected to old database: {config[\"db_old\"][\"database\"]}')\n",
                 "\n",
-                "# Connect ke DB Baru  \n",
+                "# Connect ke DB Baru\n",
                 "db_new = mysql.connector.connect(**config['db_new'])\n",
                 "cursor_new = db_new.cursor(dictionary=True)\n",
-                "print(\"Connected to new database\")"
+                "print(f'Connected to new database: {config[\"db_new\"][\"database\"]}')\n"
             ]
         },
         {
