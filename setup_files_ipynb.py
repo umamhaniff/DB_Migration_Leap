@@ -23,6 +23,8 @@ notebook_template = {
             "metadata": {},
             "outputs": [],
             "source": [
+                "import sys\n",
+                "import os\n",
                 "import mysql.connector\n",
                 "import pandas as pd\n",
                 "sys.path.append(os.path.abspath('..'))\n",
