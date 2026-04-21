@@ -1,0 +1,432 @@
+Table: absensi
+  Columns: idabsensi, tanggal, scanmasuk, scankeluar, status, idkaryawan, created_at, note1, note2, verifikasi, masuk, terlambat, keluar, cepat, FK_absensi_1
+  Row Count: 13444
+
+Table: absensi_note
+  Columns: idnote, catatan, created_at
+  Row Count: 11
+
+Table: bidang
+  Columns: idbidang, namabidang
+  Row Count: 4
+
+Table: bidangkategori
+  Columns: idkatbid, namakatbid, idbidang, FK_bidangkategori_1
+  Row Count: 12
+
+Table: bidanglink
+  Columns: idformbid, namaformbid, link, idbidang, idkatbid, share, FK_bidanglink_1, FK_bidanglink_2
+  Row Count: 7
+
+Table: calon
+  Columns: idcalon, idpendkursus, tlp, email, nama, status, FK_calon_pend
+  Row Count: 4
+
+Table: calon_detil
+  Columns: idcalond, idpendkursus, idcalon_p, jawaban, idcalon, FK_calon_detil_key, FK_calon_detil_pend, FK_calon_detil_pertanyaan
+  Row Count: 61
+
+Table: calon_pertanyaan
+  Columns: idcalon_p, idpendkursus, pertanyaan, mode, urutan, diisi_oleh, pick_target_tb, target_tb, FK_calon_pendkursus
+  Row Count: 229
+
+Table: calon_pertanyaan_detil
+  Columns: idcalon_pd, idcalon_p, pertanyaan_detil, FK_calon_pertanyaan_detil_key
+  Row Count: 4305
+
+Table: catatan_kelas
+  Columns: idcatatan_kelas, idjadwal, idjadwaldetil, catatan, materi_diskusi, tglcek, hasil_konfirm, FK_catatan_kelas_jadwal, FK_catatan_kelas_jadwaldetil
+  Row Count: 12797
+
+Table: catatan_kelas_tag
+  Columns: idcatatantag, idtagmd, idcatatan_kelas, FK_catatan_kelas_tag_1, FK_catatan_kelas_tag_2
+  Row Count: 999
+
+Table: catatan_mingguan
+  Columns: idcatatanweek, catatan, materi_diskusi, hasil_konfirmasi, tglcek, idusers, tglawal, tglakhir
+  Row Count: 0
+
+Table: catatan_siswa
+  Columns: idcatatan_siswa, idjadwal, idjadwaldetil, idsiswa, catatan, FK_catatan_siswa_jadwal, FK_catatan_siswa_jadwaldetil, FK_catatan_siswa_siswa
+  Row Count: 1502
+
+Table: catatan_siswa_follow_up
+  Columns: idcs_follow_up, idcatatan_siswa, tanggal, idusers, kesimpulan, status_follow, FK_catatan_siswa_follow_up_catatan, FK_catatan_siswa_follow_up_users
+  Row Count: 22
+
+Table: catatanawal_admin
+  Columns: idcatatanawal_admin, nama, tlp, email, status, created_at, updated_at
+  Row Count: 64
+
+Table: catatanawal_datautama
+  Columns: idcatatanawal_datautama, pengontak_admin, nama_l, nama_p, jenis_k, no_wa_ortu, no_wa_anak, email, pilihan_program, jenis_program, level_1, level_2, tujuan_program, metode, info, referensi, sby_luarsby, kewarganegaraan, provinsi, kabupaten, kecamatan, kelurahan, alamat_lengkap, nama_instansi, kurikulum, pernah_les, kesulitan_pelajaran, idcatatanawal_admin, catatanawal_datautama_ibfk_1
+  Row Count: 9
+
+Table: catatanawal_infolain
+  Columns: idcatatanawal_infolain, jenis_test, keterangan, trial, hasil_test, wawancara, catatan_penting, diterima_dikelas, form_daftar, bulan_masuk, bank, wag_lv, pic, idcatatanawal_admin, fk_idcatatan_infolain
+  Row Count: 64
+
+Table: catatanawal_tglpenting
+  Columns: idcatatanawal_tglpenting, kontakA_date, wawancara_date, trial_date, tglbayar_date, tglmasuk_date, tglkeluar_date, idcatatanawal_admin, catatanawal_tglpenting_ibfk_1
+  Row Count: 10
+
+Table: divisi
+  Columns: iddivisi, nama
+  Row Count: 6
+
+Table: docs
+  Columns: iddoc, doc, keperluan, idkaryawan, created_at
+  Row Count: 0
+
+Table: file_rapor_siswa
+  Columns: idfile, idjadwal, idsiswa, path, FK_file_rapor_siswa_jadwal, FK_file_rapor_siswa_siswa
+  Row Count: 1506
+
+Table: form
+  Columns: idform, judul, link, response
+  Row Count: 1
+
+Table: form_calon
+  Columns: idcalon, fullName, email, nickName, phone1, phone2, schoolName, classLevel, gender, activities, otherActivities, curriculum, exp, diagnostic, info, class_options, officeApp, editing, custom, purpose, placement, otherDetail, computer, software, hope, recom, gadget, date, file, kewarganegaraan, provinsi, kabupaten, status, keterangan, catatanadmin, idpendkursus, created_at, FK_form_calon_pend
+  Row Count: 184
+
+Table: form_calon_detil1
+  Columns: idcalon_detil1, nama_ortu, pekerjaan_ortu, tempat_lahir, tanggal_lahir, program, idcalon, fk_idcalon1
+  Row Count: 77
+
+Table: form_calon_detil2
+  Columns: idcalon_detil2, PIC, tgl_trial, trial_dimana, waktu_test1, waktu_test2, jenis_test, laporan_test, laporan_trial, diterima, idcalon, fk_idcalon2
+  Row Count: 77
+
+Table: form_calon_detil3
+  Columns: idcalon_detil3, lokasi, status_siswa, nomor_invoice, bank, tanggal_pembayaran, bulan_masuk, idcalon, fk_idcalon3
+  Row Count: 77
+
+Table: form_calon_detil4
+  Columns: idcalon_detil4, followUp1, followUp2, followUp3, keterangan, akun_lv, idcalon, fk_idcalon4
+  Row Count: 77
+
+Table: format_rapor
+  Columns: idformat_rapor, idpendkursus, title, idpendkursusmitra, FK_format_rapor_pendidikankursus
+  Row Count: 45
+
+Table: format_rapor_detil
+  Columns: idformat_rd, idformat_rapor, subtitle, FK_format_rapor_detil_key
+  Row Count: 129
+
+Table: format_rapor_detil_rumus
+  Columns: idfrdr, idformat_rapor, idformat_rd, param_operator, idlevel, FK_format_rapor_detil_rumus_head, FK_format_rapor_detil_rumus_key, FK_format_rapor_detil_rumus_level
+  Row Count: 1650
+
+Table: format_rapor_rumus
+  Columns: idfrr, idformat_rapor, param_operator, FK_format_rapor_rumus_key
+  Row Count: 3
+
+Table: format_raport_level
+  Columns: idformat_rl, idlevel, idpendkursus, idformat_rapor, idpendkursusmitra, FK_format_raport_level_key, FK_format_raport_level_level, FK_format_raport_level_pend
+  Row Count: 348
+
+Table: hakakses
+  Columns: idhakakses, idusers, iddivisi, pindah, status, created_at, FK_hakakses_1, FK_hakakses_2
+  Row Count: 6
+
+Table: histori_pengajuan
+  Columns: idhistori, status, catatan, idpengajuan, created_at, FK_histori_pengajuan_1
+  Row Count: 79
+
+Table: history_rapor
+  Columns: idhistori, idsiswa, idjadwal, jadwal, tgl, status, fk_jadwal, fk_siswa
+  Row Count: 1366
+
+Table: identitas
+  Columns: kode, instansi, slogan, tahun, pimpinan, alamat, kdpos, tlp, fax, website, email, logo
+  Row Count: 0
+
+Table: infrastruktur
+  Columns: idinfrastruktur, judul, link
+  Row Count: 1
+
+Table: jabatan
+  Columns: idjabatan, jabatan, iddivisi, induk, FK_jabatan_1, FK_jabatan_2
+  Row Count: 11
+
+Table: jadwal
+  Columns: idjadwal, groupwa, idsesi, idpendkursus, idperiode, hari, idlevel, idzoom, mode_belajar, tempat, status_archive, FK_jadwal_level, FK_jadwal_pendidikankursus, FK_jadwal_periode, FK_jadwal_sesi, FK_jadwal_zoom
+  Row Count: 551
+
+Table: jadwal_detil
+  Columns: idjadwaldetil, title, description, url, start, end, idjadwal, color, mitra, FK_jadwal_detil_key
+  Row Count: 17267
+
+Table: jadwal_pengajar
+  Columns: idpengajar, idjadwal, idusers, idguru, FK_jadwal_pengajar_user, FK_pengajar_jadwal
+  Row Count: 641
+
+Table: jadwal_siswa
+  Columns: idjadwal_siswa, idsiswa, idjadwal, idjadwaldetil, tgl_mulai, file_rapor, pesan_rapor, is_lulus, tambahan_sesi, tambahan_ket, is_keluar, tgl_keluar, tgl_aktif, FK_jadwal_siswa_key, FK_jadwal_siswa_siswa
+  Row Count: 3905
+
+Table: jamkerja
+  Columns: idjamkerja, namajamkerja, jammasuk, jampulang
+  Row Count: 3
+
+Table: kabupaten
+  Columns: idkabupaten, idprovinsi, name, lat, lon, FK_kabupaten_provinsi
+  Row Count: 521
+
+Table: karyawan
+  Columns: idkaryawan, ktp, nickname, kota, tgl, jk, goldar, agama, status, alamatktp, domisili, warga, anakke, hobi, linkedin, riwayat, email, emailkantor, telp, npwp, bpjskerja, bpjssehat, idusers, nama, anak, rekening, moda, ig, fb, link, FK_karyawan_1
+  Row Count: 51
+
+Table: kecamatan
+  Columns: idkecamatan, idkabupaten, nama, FK_kecamatan_kabupaten
+  Row Count: 7269
+
+Table: keluar
+  Columns: idkeluar, idusers, setuju, kirim, alasan, scan, created_at, catatan, status, FK_keluar_1
+  Row Count: 51
+
+Table: keluarga
+  Columns: idkeluarga, idusers, hubungan, namalengkap, pekerjaan, hp, FK_keluarga_1
+  Row Count: 64
+
+Table: kelurahan
+  Columns: idkelurahan, idkecamatan, nama, FK_kelurahan_kecamatan
+  Row Count: 83473
+
+Table: kurikulum
+  Columns: idkurikulum, idlevel, judul, FK_kurikulum_level
+  Row Count: 0
+
+Table: kurikulum_detil
+  Columns: idkur_det, menu, idkurikulum, FK_kurikulum_detil_key
+  Row Count: 0
+
+Table: kurikulum_detil_sub
+  Columns: idkur_det_sub, kompetensi, idkur_det, FK_kurikulum_detil_sub_key
+  Row Count: 0
+
+Table: kurikulum_kelas
+  Columns: idkur_kel, idkur_det_sub, idjadwaldetil, FK_kurikulum_kelas_1, FK_kurikulum_kelas_2
+  Row Count: 0
+
+Table: kursus
+  Columns: idkursus, nama, tanggal, deskripsi, lokasi, nosertifikat, idusers, FK_kursus_1
+  Row Count: 50
+
+Table: leapprofil
+  Columns: idleap, judul, link
+  Row Count: 0
+
+Table: leapverse
+  Columns: idleapverse, tgl, download, aktif
+  Row Count: 365
+
+Table: level
+  Columns: idlevel, level, idpendkursus, tingkatan, mitra, FK_level_pendidikan_kursus
+  Row Count: 181
+
+Table: libur
+  Columns: idlibur, title, description, url, start, end, color, libur, allprogram
+  Row Count: 79
+
+Table: libur_pendkursus
+  Columns: idlibur_pddk, idpendkursus, idlibur, fk_libur, fk_pendkursus
+  Row Count: 2
+
+Table: linkdrive
+  Columns: idlink, link, judul
+  Row Count: 0
+
+Table: linkform
+  Columns: idlink, form, bidang
+  Row Count: 3
+
+Table: log
+  Columns: idlog, idusers, ip, browser, aktifitas, created_at, FK_log_1
+  Row Count: 21887
+
+Table: mitra
+  Columns: idmitra, nama, instansi, namasekolah, lokasi, kepsek, cp, status, visimisi, program, sdm, weakness, rekomen, created_at, jenis, provinsi, kotkab, jml, bidang, leapverse, kemitraan, tahun, jeniskemitraan, elsa, classin, mitraleap
+  Row Count: 22
+
+Table: mitra_note
+  Columns: idmnote, idmitra, note, idusers, created_at, status, startdate, enddate, FK_mitra_note_1, FK_mitra_note_2
+  Row Count: 296
+
+Table: mitra_users
+  Columns: idmusers, idmnote, idusers, FK_mitra_users_1, FK_mitra_users_2
+  Row Count: 228
+
+Table: mou
+  Columns: idmou, kebutuhan, keterangan, idusers, status, link, created_at, catatan, FK_mou_1
+  Row Count: 2
+
+Table: mou_histori
+  Columns: idhistori, idmou, status, catatan, created_at, FK_mou_histori_1
+  Row Count: 10
+
+Table: nowag
+  Columns: idno, wa
+  Row Count: 1
+
+Table: parameter_nilai
+  Columns: idp_nilai, idlevel, parameter, isnumber, FK_parameter_nilai_level
+  Row Count: 1187
+
+Table: pekerjaan
+  Columns: idpekerjaan, namaperusahaan, periode, jabatan, jobdesk, idusers, FK_pekerjaan_1
+  Row Count: 67
+
+Table: pelamar
+  Columns: idpelamar, email, nama, panggilan, jk, ttl, domisili, alamat, wa, sosmed, linkedin, laptop, internet, kegiatan, rencana, mobilitas, info, wfo, bergabung, jenis, created_at, status, ig, fb, idpengajuan, work, ppdk, pengalaman, wawasan, sehat, statusnikah, ajar, app, gunalaptop, toefl, apps, gaji, link, resign, hasiliq, piciq, picminat, picpribadi, FK_pelamar_1
+  Row Count: 178
+
+Table: pelamar_note
+  Columns: idnote, idpelamar, status, note, idusers, created_at, link, pertanyaan, FK_pelamar_note_1, FK_pelamar_note_2
+  Row Count: 403
+
+Table: pelamar_submit
+  Columns: idsubmit, idpelamar, idusers, link, created_at, FK_pelamar_submit_1, FK_pelamar_submit_2
+  Row Count: 0
+
+Table: pelamar_users
+  Columns: idassign, idpelamar, idusers, FK_pelamarusers_1, FK_pelamarusers_2
+  Row Count: 281
+
+Table: pendidikan
+  Columns: idpendidikan, sekolah, jenjang, prodi, tahun, ipk, idusers, organisasi, FK_pendidikan_1
+  Row Count: 53
+
+Table: pendidikankursus
+  Columns: idpendkursus, nama_kursus, keterangan, idinduk
+  Row Count: 21
+
+Table: pengajuan
+  Columns: idpengajuan, keterangan, syarat, pertanyaan, alur, test, status, jumlah, idusers, created_at, FK_pengajuan_1
+  Row Count: 33
+
+Table: pengumuman
+  Columns: kode, judul, isi, gambar, urutan
+  Row Count: 1
+
+Table: perijinan
+  Columns: idperijinan, jenis, tanggalmulai, tanggalselesai, waktumulai, waktuselesai, keterangan, surat, idusers, created_at, status, catatan, FK_perijinan_1
+  Row Count: 957
+
+Table: perijinan_note
+  Columns: idnotes, idperijinan, baca, status, catatan, idjabatan, iddivisi, FK_perijinan_note_1, FK_perijinan_note_3, FK_perijinan_note_4
+  Row Count: 2107
+
+Table: periode
+  Columns: idperiode, nama_term, tanggal, bulan_awal, tahun_awal, idpendkursus, jml_sesi, tahun_ajar, mitra, FK_periode_pendkursus
+  Row Count: 93
+
+Table: pinjam
+  Columns: idpinjam, tglpinjam, deskripsi, idusers, status, catatan, created_at, FK_pinjam_1
+  Row Count: 194
+
+Table: presensi_siswa
+  Columns: idpresensi_siswa, idjadwaldetil, idsiswa, waktu, status, idjadwal, idkur_kel, FK_presensi_siswa_jadwal, FK_presensi_siswa_jadwaldetil, FK_presensi_siswa_kurkel, FK_presensi_siswa_siswa
+  Row Count: 97762
+
+Table: problem
+  Columns: idproblem, keterangan, idusers, status, created_at, solved_at, catatan, image_path, FK_problem_1
+  Row Count: 160
+
+Table: provinsi
+  Columns: idprovinsi, nama
+  Row Count: 36
+
+Table: purchase
+  Columns: idbeli, deskripsi, link, idusers, status, catatan, created_at, done_at, linkpurchase, FK_purchase_1
+  Row Count: 110
+
+Table: purchase_link
+  Columns: idlink, link
+  Row Count: 1
+
+Table: rapor
+  Columns: idrapor, idjadwal, idsiswa, tanggal, idp_nilai, nilai, FK_rapor_jadwal, FK_rapor_parameter, FK_rapor_siswa
+  Row Count: 22837
+
+Table: role
+  Columns: idrole, nama_role
+  Row Count: 9
+
+Table: role_users
+  Columns: idru, idusers, idmitra
+  Row Count: 0
+
+Table: sesi
+  Columns: idsesi, nama_sesi, waktu_awal, waktu_akhir
+  Row Count: 43
+
+Table: siswa
+  Columns: idsiswa, tgl_daftar, domisili, nama_lengkap, panggilan, jkel, nama_sekolah, level_sekolah, nama_ortu, pekerjaan_ortu, tmp_lahir, tgl_lahir, no_induk, email, tlp, keluar, idcalon, asal_calon, provinsi, kabupaten, kecamatan, kelurahan, idmitra, nisn, nik, kewarganegaraan, agama, rt, rw, kodepos, statussiswa, rekomen, info, pembayaran, nama_ayah, pekerjaan_ayah, jenjang_ayah, penghasilan_ayah, penghasilan_ibu, jenjang_ibu, nama_wali, pekerjaan_wali, jenjang_wali, penghasilan_wali, wawalmur, waadmin, wapeserta, sts_pengisian, nama_ibu, bukti, lulus, created_bukti
+  Row Count: 1469
+
+Table: siswa_keluar
+  Columns: idsiswa_keluar, idsiswa, alasan, tanggal, FK_siswa_keluar_siswa
+  Row Count: 556
+
+Table: siswa_keluar_mitra
+  Columns: idsiswa_keluar, idsiswa, alasan, tanggal, FK_siswamitra_keluar_1
+  Row Count: 0
+
+Table: siswa_keluar_tag
+  Columns: idstag, idtag, idsiswa, idsiswa_keluar, FK_siswa_keluar_tag_1, FK_siswa_keluar_tag_2, FK_siswa_keluar_tag_3
+  Row Count: 404
+
+Table: siswamitra
+  Columns: idsiswa, tgl_daftar, domisili, nama_lengkap, panggilan, jkel, nama_instansi, level_sekolah, pekerjaan, tmp_lahir, tgl_lahir, no_induk, email, tlp, keluar, idmitra
+  Row Count: 0
+
+Table: sop
+  Columns: idsop, judulsop, link, created_at, idsopkategori, FK_sop_1
+  Row Count: 4
+
+Table: sopkategori
+  Columns: idsopkategori, nama
+  Row Count: 3
+
+Table: suratkeluar
+  Columns: idsurat, keterangan, link, idusers, status, created_at, nosurat, catatan, FK_suratkeluar_1
+  Row Count: 213
+
+Table: suratkeluar_histori
+  Columns: idstatus, idsurat, status, catatan, created_at, fk_suratkeluarhistori_idsurat
+  Row Count: 477
+
+Table: surattugas
+  Columns: idsurat, acara, undangan, waktu, lokasi, jenis, status, idusers, created_at, nosurat, catatan, link, linklaporan, notelaporan, ket, notebatal, fk_surattugas_idusers
+  Row Count: 135
+
+Table: surattugas_users
+  Columns: idsu, idsurat, idusers, fk_surattugasusers_idsurat, fk_surattugasusers_idusers
+  Row Count: 304
+
+Table: syarat
+  Columns: idsyarat, syarat
+  Row Count: 1
+
+Table: tag_keluar
+  Columns: idtag, tag, keterangan
+  Row Count: 11
+
+Table: tag_materi_diskusi
+  Columns: idtagmd, tag, keterangan
+  Row Count: 11
+
+Table: ttd
+  Columns: idttd, ttd, status
+  Row Count: 1
+
+Table: users
+  Columns: idusers, email, pass, nama, foto, idrole, wa, thnbekerja, idjabatan, idjamkerja, minat, status, idbidang, ispurchase, isteaching, ishr, isga, isit, ispdd, isbusdev, ispimpinan, ttd, expertise, FK_users_1, FK_users_2, FK_users_3
+  Row Count: 51
+
+Table: zoom
+  Columns: idzoom, topic, link, meeting_id, passcode
+  Row Count: 14
+
