@@ -25,6 +25,7 @@ notebook_template = {
             "source": [
                 "import mysql.connector\n",
                 "import pandas as pd\n",
+                "sys.path.append(os.path.abspath('..'))\n",
                 "from config import get_db_config\n",
                 "import warnings\n",
                 "warnings.filterwarnings('ignore')"
