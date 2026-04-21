@@ -4,5 +4,11 @@ mysql-connector-python==9.0.0
 # Untuk keamanan (menyimpan credential database di file .env)
 python-dotenv==1.0.1
 
-# Opsional: Untuk pengolahan data tabular yang lebih kompleks
+# Untuk pengolahan data tabular
 pandas==2.2.0
+
+# Untuk menjalankan Jupyter Notebook secara programatik
+jupyter==1.0.0
+nbformat==5.9.2
+nbconvert==7.14.2
+ipykernel==6.28.0
