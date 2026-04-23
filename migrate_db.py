@@ -5,10 +5,10 @@ Konsep alur migrasi:
 - Database lama (dataleap_v5_example) → Database baru (dataleap_v5_migration)
 - Migrasi dilakukan PER FASE (tidak sekaligus semua fase)
 - Setiap fase:
-  1. Jalankan 3 notebook (script_cimut, script_afrida, script_hanif) secara berurutan
-  2. Kumpulkan hasil transformasi dari setiap notebook
-  3. Simpan hasil akhir ke database baru
-  4. Lanjut ke fase berikutnya
+    1. Jalankan 3 notebook (script_cimut, script_afrida, script_hanif) secara berurutan
+    2. Kumpulkan hasil transformasi dari setiap notebook
+    3. Simpan hasil akhir ke database baru
+    4. Lanjut ke fase berikutnya
 
 FASE:
 - FASE 1: Master & Wilayah (Independen)

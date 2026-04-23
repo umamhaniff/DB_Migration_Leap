@@ -26,7 +26,7 @@
    - ✅ JSON summary per run
 
 ### 3. **setup_files_ipynb.py** (Updated)
-   - ✅ Generate 15 Jupyter Notebook files (5 fase × 3 orang)
+   - ✅ Generate 20 Jupyter Notebook files (5 fase × 3 orang)
    - ✅ Template notebook dengan 7 sections:
      1. Header & Deskripsi
      2. Import Libraries
@@ -57,6 +57,7 @@
    ✅ fase_2/  (script_cimut.ipynb, script_afrida.ipynb, script_hanif.ipynb)
    ✅ fase_3/  (script_cimut.ipynb, script_afrida.ipynb, script_hanif.ipynb)
    ✅ fase_4/  (script_cimut.ipynb, script_afrida.ipynb, script_hanif.ipynb)
+   ✅ fase_5/  (script_cimut.ipynb, script_afrida.ipynb, script_hanif.ipynb)
    ```
 
 ---
@@ -66,18 +67,36 @@
 ### PER FASE (bukan all at once):
 
 ```
-FASE 1: Master & Wilayah
-├─ Run script_cimut.ipynb    → Collect result
-├─ Run script_afrida.ipynb   → Collect result
-├─ Run script_hanif.ipynb    → Collect result
+🟢 FASE 1: Persiapan Master Data (PARALEL)
+├─ Cimut: Sistem & Wilayah
+├─ Afrida: Akademik Dasar
+├─ Hanif: Role & Sistem
 └─ Validate & Save to DB_NEW ✓
         ↓
-FASE 2: SDM & Karyawan
-├─ Run script_cimut.ipynb    → Collect result
-├─ Run script_afrida.ipynb   → Collect result
-├─ Run script_hanif.ipynb    → Collect result
+🔵 FASE 2: Pendataan SDM & Wilayah Detail
+├─ Cimut: SDM & Relasi
+├─ Afrida: Periode & Wilayah
+├─ Hanif: Divisi & Kelurahan
 └─ Validate & Save to DB_NEW ✓
         ↓
+🟡 FASE 3: Operasional, CRM & Pendaftaran
+├─ Cimut (FOKUS): CRM & Aset
+├─ Afrida: Dokumentasi & Surat
+├─ Hanif: Rekrutmen & Mitra
+└─ Validate & Save to DB_NEW ✓
+        ↓
+🔴 FASE 4: Penjadwalan & Siswa Aktif
+├─ Cimut: Kehadiran & Izin
+├─ Afrida (FOKUS): Jadwal & Catatan
+├─ Hanif (FOKUS): Siswa & Mitra
+└─ Validate & Save to DB_NEW ✓
+        ↓
+🟣 FASE 5: Penilaian & Finalisasi (SELESAI)
+├─ Cimut: System Logs & Config
+├─ Afrida: Presensi & Catatan Siswa
+├─ Hanif (FOKUS): Rapor & Penilaian
+└─ Validate & Save to DB_NEW ✓
+```
 FASE 3: CRM, Rekrutmen & Sarpras
 ├─ Run script_cimut.ipynb    → Collect result
 ├─ Run script_afrida.ipynb   → Collect result
@@ -106,26 +125,57 @@ cp .env.example .env
 ```
 
 ### Step 2: Isi Query di Setiap Notebook
-Buka setiap notebook dan isi query:
-- **FASE 1** (Master Wilayah): `fase_1/script_*.ipynb`
-  - script_cimut: Wilayah (provinsi, kabupaten, kecamatan, kelurahan)
-  - script_afrida: System setup (roles, permissions, divisions)
-  - script_hanif: Akademik dasar (kursus, level, sesi, libur)
+Buka setiap notebook dan isi query sesuai pembagian berikut:
 
-- **FASE 2** (SDM & Karyawan): `fase_2/script_*.ipynb`
-  - script_cimut: Users & Karyawan
-  - script_afrida: Kehadiran (absensi, izin)
-  - script_hanif: Detail SDM
+#### **🟢 FASE 1: Persiapan Master Data (PARALEL)**
+- **Cimut**: `fase_1/script_cimut.ipynb`
+  - Tabel: users, divisions, shift_kerja, admin_sarpras, sop_kategori, provinsi, web_berita, web_statistik
 
-- **FASE 3** (CRM, Rekrutmen, Sarpras): `fase_3/script_*.ipynb`
-  - script_cimut: CRM (calon_siswa)
-  - script_afrida: Rekrutmen (pelamar, mitra)
-  - script_hanif: Sarpras (surat, peminjaman, pengadaan)
+- **Afrida**: `fase_1/script_afrida.ipynb`
+  - Tabel: kursus, level, sesi, libur, topik_diskusi, kursus_level, kursus_libur
 
-- **FASE 4** (KBM & Rapor): `fase_4/script_*.ipynb`
-  - script_cimut: Siswa aktif & jadwal
-  - script_afrida: Presensi & catatan kelas
-  - script_hanif: Rapor & logs
+- **Hanif**: `fase_1/script_hanif.ipynb`
+  - Tabel: roles, permissions, role_has_permissions, busdev_bidang, syarat_resign, ttd, tag_siswa_keluar
+
+#### **🔵 FASE 2: Pendataan SDM & Wilayah Detail**
+- **Cimut**: `fase_2/script_cimut.ipynb`
+  - Tabel: karyawan, keluarga_karyawan, bidang_kategori, bidang_link
+
+- **Afrida**: `fase_2/script_afrida.ipynb`
+  - Tabel: periode, parameter_nilai, kabupaten, kecamatan
+
+- **Hanif**: `fase_2/script_hanif.ipynb`
+  - Tabel: division_user, model_has_roles, model_has_permissions, kelurahan
+
+#### **🟡 FASE 3: Operasional, CRM & Pendaftaran**
+- **Cimut (FOKUS)**: `fase_3/script_cimut.ipynb`
+  - Tabel: kontak_prospek, calon_siswa, calon_siswa_akademik, calon_siswa_ortu, calon_siswa_bayar, calon_siswa_jadwal, calon_siswa_kursus, calon_siswa_proses, calon_siswa_status_logs, peminjaman, pengadaan, problem
+
+- **Afrida**: `fase_3/script_afrida.ipynb`
+  - Tabel: sop, surat_keluar, verifikasi_surat_keluar, surat_tugas, surat_tugas_anggota
+
+- **Hanif**: `fase_3/script_hanif.ipynb`
+  - Tabel: pengajuan_karyawan, histori_pengajuan, pelamar, pelamar_kerja, pelamar_sekolah, pelamar_kursus, progres_pelamar, rekrutmen_pelamar
+
+#### **🔴 FASE 4: Penjadwalan & Siswa Aktif**
+- **Cimut**: `fase_4/script_cimut.ipynb`
+  - Tabel: izin_karyawan, verifikasi_izin, absensi, verifikasi_absensi, karyawan_resign
+
+- **Afrida (FOKUS)**: `fase_4/script_afrida.ipynb`
+  - Tabel: jadwal, jadwal_hari, jadwal_detail, jadwal_pengajar, jadwal_siswa, catatan_kelas, catatan_kelas_tag, catatan_mingguan
+
+- **Hanif (FOKUS)**: `fase_4/script_hanif.ipynb`
+  - Tabel: siswa, kursus_siswa, siswa_keluar, mitra, mitra_progres, kemitraan_verifikator, siswa_mitra, siswa_mitra_keluar
+
+#### **🟣 FASE 5: Penilaian & Finalisasi (SELESAI)**
+- **Cimut**: `fase_5/script_cimut.ipynb`
+  - Tabel: activity_log, log_aktivitas, jadwal_detail_logs, password_reset_tokens
+
+- **Afrida**: `fase_5/script_afrida.ipynb`
+  - Tabel: presensi_siswa, catatan_siswa, followup_cs
+
+- **Hanif (FOKUS)**: `fase_5/script_hanif.ipynb`
+  - Tabel: rapor_format, rapor_format_sub, rapor_format_formula, rapor_format_formula_sub, rapor_level_config, rapor_sub_level, rapor_siswa, rapor_siswa_file, rapor_lacak
 
 ### Step 3: Test Query (Optional)
 ```bash
@@ -192,18 +242,18 @@ python migrate_db.py
 ## ✨ Summary
 
 **Total Setup Files Created/Updated:**
-- ✅ 1 config file (config.py)
+- ✅ 1 config file (config.py) - UPDATED dengan 5 fase
 - ✅ 1 main controller (migrate_db.py)
 - ✅ 1 notebook generator (setup_files_ipynb.py)
-- ✅ 15 notebook template files
-- ✅ 3 documentation files
+- ✅ 20 notebook template files (5 fase × 3 orang)
+- ✅ 3 documentation files - UPDATED
 - ✅ 1 template config file
 
 **Status:** READY FOR PRODUCTION 🚀
 
 ---
 
-**Next Action:** Sesuaikan credential database di `.env` file, kemudian mulai isi query di masing-masing notebook!
+**Next Action:** Sesuaikan credential database di `.env` file, kemudian mulai isi query di masing-masing notebook sesuai pembagian personel per fase!
 
 **Contact:** Hubungi tim development untuk bantuan setup database atau query specifics.
 
