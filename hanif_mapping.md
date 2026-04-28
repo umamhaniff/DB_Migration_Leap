@@ -5,92 +5,92 @@
 | Tabel Lama | Kolom Lama | Tabel Baru | Kolom Baru |
 | :--- | :--- | :--- | :--- |
 | pengajuan | idpengajuan | pengajuan_karyawan | id_pengajuan |
-| pengajuan | keterangan | pengajuan_karyawan | id_user |
-| pengajuan | syarat | pengajuan_karyawan | posisi |
-| pengajuan | pertanyaan | pengajuan_karyawan | jumlah |
-| pengajuan | alur | pengajuan_karyawan | syarat |
-| pengajuan | test | pengajuan_karyawan | pertanyaan |
-| pengajuan | status | pengajuan_karyawan | alur_seleksi |
-| pengajuan | jumlah | pengajuan_karyawan | daftar_tes |
-| pengajuan | idusers | pengajuan_karyawan | status |
+| pengajuan | idusers | pengajuan_karyawan | id_user |
+| pengajuan | keterangan | pengajuan_karyawan | posisi |
+| pengajuan | jumlah | pengajuan_karyawan | jumlah |
+| pengajuan | syarat | pengajuan_karyawan | syarat |
+| pengajuan | pertanyaan | pengajuan_karyawan | pertanyaan |
+| pengajuan | alur | pengajuan_karyawan | alur_seleksi |
+| pengajuan | test | pengajuan_karyawan | daftar_tes |
+| pengajuan | status | pengajuan_karyawan | status |
 | pengajuan | created_at | pengajuan_karyawan | created_at |
 | histori_pengajuan | idhistori | histori_pengajuan | id_verifikasi |
-| histori_pengajuan | status | histori_pengajuan | id_pengajuan |
-| histori_pengajuan | catatan | histori_pengajuan | status_verifikasi_pengajuan |
-| histori_pengajuan | idpengajuan | histori_pengajuan | catatan |
+| histori_pengajuan | idpengajuan | histori_pengajuan | id_pengajuan |
+| histori_pengajuan | status | histori_pengajuan | status_verifikasi_pengajuan |
+| histori_pengajuan | catatan | histori_pengajuan | catatan |
 | histori_pengajuan | created_at | histori_pengajuan | created_at |
 | pelamar | idpelamar | pelamar | id_pelamar |
-| pelamar | email | pelamar | id_pengajuan |
-| pelamar | nama | pelamar | email_pelamar |
-| pelamar | panggilan | pelamar | nama_lengkap |
-| pelamar | jk | pelamar | nama_panggilan |
-| pelamar | ttl | pelamar | jenis_kelamin |
-| pelamar | domisili | pelamar | tempat_lahir |
-| pelamar | alamat | pelamar | tanggal_lahir |
-| pelamar | wa | pelamar | alamat_ktp |
-| pelamar | sosmed | pelamar | alamat_domisili |
-| pelamar | linkedin | pelamar | nomor_wa |
-| pelamar | laptop | pelamar | akun_linkedin |
-| pelamar | internet | pelamar | akun_instagram |
-| pelamar | kegiatan | pelamar | akun_facebook |
-| pelamar | rencana | pelamar | sosmed_lain |
-| pelamar | mobilitas | pelamar | spesifikasi_laptop |
-| pelamar | info | pelamar | internet |
-| pelamar | wfo | pelamar | kegiatan_sekarang |
-| pelamar | bergabung | pelamar | rencana_karir |
-| pelamar | jenis | pelamar | mobilitas |
-| pelamar | created_at | pelamar | sumber_info |
-| pelamar | status | pelamar | siap_wfo |
-| pelamar | ig | pelamar | tanggal_bergabung |
-| pelamar | fb | pelamar | kategori_pelamar |
-| pelamar | idpengajuan | pelamar | riwayat_kerja |
-| pelamar | work | pelamar | riwayat_pendidikan |
-| pelamar | ppdk | pelamar | pengalaman_bidang |
-| pelamar | pengalaman | pelamar | wawasan |
-| pelamar | wawasan | pelamar | riwayat_kesehatan |
-| pelamar | sehat | pelamar | status_pernikahan |
-| pelamar | statusnikah | pelamar | kemampuan_ajar |
-| pelamar | ajar | pelamar | penguasaan_aplikasi |
-| pelamar | app | pelamar | aplikasi_lainnya |
+| pelamar | idpengajuan | pelamar | id_pengajuan |
+| pelamar | email | pelamar | email_pelamar |
+| pelamar | nama | pelamar | nama_lengkap |
+| pelamar | panggilan | pelamar | nama_panggilan |
+| pelamar | jk | pelamar | jenis_kelamin |
+| pelamar | | pelamar | tempat_lahir |
+| pelamar | ttl | pelamar | tanggal_lahir |
+| pelamar | alamat | pelamar | alamat_ktp |
+| pelamar | domisili | pelamar | alamat_domisili |
+| pelamar | wa | pelamar | nomor_wa |
+| pelamar | linkedin | pelamar | akun_linkedin |
+| pelamar | ig | pelamar | akun_instagram |
+| pelamar | fb | pelamar | akun_facebook |
+| pelamar | sosmed | pelamar | sosmed_lain |
+| pelamar | laptop | pelamar | spesifikasi_laptop |
+| pelamar | internet | pelamar | internet |
+| pelamar | kegiatan | pelamar | kegiatan_sekarang |
+| pelamar | rencana | pelamar | rencana_karir |
+| pelamar | mobilitas | pelamar | mobilitas |
+| pelamar | info | pelamar | sumber_info |
+| pelamar | wfo | pelamar | siap_wfo |
+| pelamar | bergabung | pelamar | tanggal_bergabung |
+| pelamar | jenis | pelamar | kategori_pelamar |
+| pelamar | work | pelamar | riwayat_kerja |
+| pelamar | ppdk | pelamar | riwayat_pendidikan |
+| pelamar | pengalaman | pelamar | pengalaman_bidang |
+| pelamar | wawasan | pelamar | wawasan |
+| pelamar | sehat | pelamar | riwayat_kesehatan |
+| pelamar | statusnikah | pelamar | status_pernikahan |
+| pelamar | ajar | pelamar | kemampuan_ajar |
+| pelamar | app | pelamar | penguasaan_aplikasi |
+| pelamar | apps | pelamar | aplikasi_lainnya |
 | pelamar | gunalaptop | pelamar | penggunaan_laptop |
 | pelamar | toefl | pelamar | skor_toefl |
-| pelamar | apps | pelamar | ekspektasi_gaji |
-| pelamar | gaji | pelamar | tautan_berkas |
-| pelamar | link | pelamar | alasan_resign |
-| pelamar | resign | pelamar | skor_iq |
-| pelamar | hasiliq | pelamar | foto_iq |
-| pelamar | piciq | pelamar | foto_minat |
-| pelamar | picminat | pelamar | foto_kepribadian |
-| pelamar | picpribadi | pelamar | created_at |
+| pelamar | gaji | pelamar | ekspektasi_gaji |
+| pelamar | link | pelamar | tautan_berkas |
+| pelamar | resign | pelamar | alasan_resign |
+| pelamar | hasiliq | pelamar | skor_iq |
+| pelamar | piciq | pelamar | foto_iq |
+| pelamar | picminat | pelamar | foto_minat |
+| pelamar | picpribadi | pelamar | foto_kepribadian |
+| pelamar | created_at | pelamar | created_at |
 | pekerjaan | idpekerjaan | pelamar_kerja | id_pelamar_kerja |
-| pekerjaan | namaperusahaan | pelamar_kerja | id_pelamar |
-| pekerjaan | periode | pelamar_kerja | nama_perusahaan |
-| pekerjaan | jabatan | pelamar_kerja | periode |
-| pekerjaan | jobdesk | pelamar_kerja | jabatan |
-| pekerjaan | idusers | pelamar_kerja | deskripsi_kerja |
+| pekerjaan | idusers | pelamar_kerja | id_pelamar |
+| pekerjaan | namaperusahaan | pelamar_kerja | nama_perusahaan |
+| pekerjaan | periode | pelamar_kerja | periode |
+| pekerjaan | jabatan | pelamar_kerja | jabatan |
+| pekerjaan | jobdesk | pelamar_kerja | deskripsi_kerja |
 | pendidikan | idpendidikan | pelamar_sekolah | id_pelamar_sekolah |
-| pendidikan | sekolah | pelamar_sekolah | id_pelamar |
-| pendidikan | jenjang | pelamar_sekolah | nama_sekolah |
-| pendidikan | prodi | pelamar_sekolah | jenjang |
-| pendidikan | tahun | pelamar_sekolah | prodi |
-| pendidikan | ipk | pelamar_sekolah | tahun_lulus |
-| pendidikan | idusers | pelamar_sekolah | ipk |
+| pendidikan | idusers | pelamar_sekolah | id_pelamar |
+| pendidikan | sekolah | pelamar_sekolah | nama_sekolah |
+| pendidikan | jenjang | pelamar_sekolah | jenjang |
+| pendidikan | prodi | pelamar_sekolah | prodi |
+| pendidikan | tahun | pelamar_sekolah | tahun_lulus |
+| pendidikan | ipk | pelamar_sekolah | ipk |
 | pendidikan | organisasi | pelamar_sekolah | organisasi |
 | kursus | idkursus | pelamar_kursus | id_pelamar_kursus |
-| kursus | nama | pelamar_kursus | id_pelamar |
-| kursus | tanggal | pelamar_kursus | nama_kursus |
-| kursus | deskripsi | pelamar_kursus | tanggal |
-| kursus | lokasi | pelamar_kursus | deskripsi |
-| kursus | nosertifikat | pelamar_kursus | lokasi |
-| kursus | idusers | pelamar_kursus | nomor_sertifikat |
+| kursus | idusers | pelamar_kursus | id_pelamar |
+| kursus | nama | pelamar_kursus | nama_kursus |
+| kursus | tanggal | pelamar_kursus | tanggal |
+| kursus | deskripsi | pelamar_kursus | deskripsi |
+| kursus | lokasi | pelamar_kursus | lokasi |
+| kursus | nosertifikat | pelamar_kursus | nomor_sertifikat |
 | pelamar_note | idnote | progres_pelamar | id_progres_pelamar |
 | pelamar_note | idpelamar | progres_pelamar | id_pelamar |
-| pelamar_note | status | progres_pelamar | id_user |
-| pelamar_note | note | progres_pelamar | status_progres_pelamar |
-| pelamar_note | idusers | progres_pelamar | catatan |
-| pelamar_note | created_at | progres_pelamar | tautan_file |
-| pelamar_note | link | progres_pelamar | pertanyaan |
-| pelamar_note | pertanyaan | progres_pelamar | created_at |
+| pelamar_note | idusers | progres_pelamar | id_user |
+| pelamar_note | status | progres_pelamar | status_progres_pelamar |
+| pelamar_note | note | progres_pelamar | catatan |
+| pelamar_note | link | progres_pelamar | tautan_file |
+| pelamar_note | pertanyaan | progres_pelamar | pertanyaan |
+| pelamar_note | created_at | progres_pelamar | created_at |
 | pelamar_users | idassign | rekrutmen_pelamar | id_rekrutmen |
 | pelamar_users | idpelamar | rekrutmen_pelamar | id_pelamar |
 | pelamar_users | idusers | rekrutmen_pelamar | id_user |
@@ -138,7 +138,7 @@
 | siswa | penghasilan_ayah | siswa | penghasilan_ayah |
 | siswa | nama_ibu | siswa | nama_ibu |
 | siswa | penghasilan_ibu | siswa | penghasilan_ibu |
-| | | siswa | pekerjaan_ibu |
+| siswa | | siswa | pekerjaan_ibu |
 | siswa | jenjang_ibu | siswa | pendidikan_ibu |
 | siswa | nama_wali | siswa | nama_wali |
 | siswa | pekerjaan_wali | siswa | pekerjaan_wali |
@@ -151,14 +151,22 @@
 | siswa | bukti | siswa | path_bukti_bayar |
 | siswa | lulus | siswa | status_lulus_siswa |
 | siswa | created_bukti | siswa | tanggal_upload_bukti |
+| siswa | | siswa | deleted_at |
+| | | kursus_siswa | id_kursus_siswa |
+| | | kursus_siswa | id_siswa |
+| | | kursus_siswa | id_kursus |
+| | | kursus_siswa | tanggal_mulai |
+| | | kursus_siswa | metode_belajar |
+| | | kursus_siswa | status_aktif |
+| | | kursus_siswa | catatan |
 | siswa_keluar | idsiswa_keluar | siswa_keluar | id_keluar |
 | siswa_keluar | idsiswa | siswa_keluar | id_siswa |
-| | | siswa_keluar | id_kursus |
+| siswa_keluar | | siswa_keluar | id_kursus |
 | siswa_keluar | alasan | siswa_keluar | alasan_keluar |
 | siswa_keluar | tanggal | siswa_keluar | tanggal_keluar |
-| | | siswa_keluar | id_tag_keluar |
+| siswa_keluar | | siswa_keluar | id_tag_keluar |
 | mitra | idmitra | mitra | id_mitra |
-| | | mitra | kode_mitra |
+| mitra | | mitra | kode_mitra |
 | mitra | nama | mitra | nama_mitra |
 | mitra | instansi | mitra | nama_instansi |
 | mitra | namasekolah | mitra | nama_sekolah |
@@ -211,7 +219,7 @@
 | siswamitra | tlp | siswa_mitra | wa_sm |
 | siswamitra | keluar | siswa_mitra | status_keluar_sm |
 | siswamitra | idmitra | siswa_mitra | id_mitra |
-| | | siswa_mitra | sertifikat_sm |
+| siswamitra | | siswa_mitra | sertifikat_sm |
 | siswa_keluar_mitra | idsiswa_keluar | siswa_mitra_keluar | id_sm_keluar |
 | siswa_keluar_mitra | idsiswa | siswa_mitra_keluar | id_sm |
 | siswa_keluar_mitra | alasan | siswa_mitra_keluar | alasan_keluar_sm |
@@ -240,6 +248,9 @@
 | format_raport_level | idlevel | rapor_level_config | id_level |
 | format_raport_level | idpendkursus | rapor_level_config | id_kursus |
 | format_raport_level | idformat_rapor | rapor_level_config | id_rapor_format |
+| | | rapor_sub_level | id_rapor_sub_level |
+| | | rapor_sub_level | id_rapor_format_sub |
+| | | rapor_sub_level | id_level |
 | rapor | idrapor | rapor_siswa | id_rapor_siswa |
 | rapor | idjadwal | rapor_siswa | id_jadwal |
 | rapor | idsiswa | rapor_siswa | id_siswa |
@@ -254,6 +265,6 @@
 | history_rapor | idjadwal | rapor_lacak | id_jadwal |
 | history_rapor | tgl | rapor_lacak | tanggal_terkirim |
 | history_rapor | status | rapor_lacak | status_pengiriman |
-| | | rapor_lacak | id_rapor_siswa_file |
+| history_rapor | | rapor_lacak | id_rapor_siswa_file |
 
 ---
