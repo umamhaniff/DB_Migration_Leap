@@ -25,7 +25,7 @@
 | pelamar | nama | pelamar | nama_lengkap |
 | pelamar | panggilan | pelamar | nama_panggilan |
 | pelamar | jk | pelamar | jenis_kelamin |
-| pelamar | | pelamar | tempat_lahir |
+| pelamar | ttl | pelamar | tempat_lahir |
 | pelamar | ttl | pelamar | tanggal_lahir |
 | pelamar | alamat | pelamar | alamat_ktp |
 | pelamar | domisili | pelamar | alamat_domisili |
