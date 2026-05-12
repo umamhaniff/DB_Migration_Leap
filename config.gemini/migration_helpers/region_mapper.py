@@ -187,6 +187,72 @@ def generate_kecamatan_mapping(old_engine: Engine, new_engine: Engine, kabupaten
     logger.info(f"Kecamatan mapping generated. Mapped: {mapping_df['status_mapping'].eq('mapped').sum()}")
     return mapping_df
 
+
+def generate_kelurahan_mapping(old_engine: Engine, new_engine: Engine, kecamatan_mapping_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Generates a mapping DataFrame for kelurahans, ensuring hierarchical matching with mapped kecamatans.
+    """
+    logger.info("Generating kelurahan mapping...")
+
+    # Fetch old and new kelurahans
+    with old_engine.connect() as conn:
+        old_df = pd.read_sql(text("SELECT id as old_id, name as old_name, kecamatan_id FROM kelurahans"), conn)
+    with new_engine.connect() as conn:
+        new_df = pd.read_sql(text("SELECT id as new_id, name as new_name, kecamatan_id as new_kecamatan_id FROM kelurahans"), conn)
+
+    # Normalize names
+    old_df['normalized_name'] = old_df['old_name'].apply(normalize_region_name)
+    new_df['normalized_name'] = new_df['new_name'].apply(normalize_region_name)
+
+    # Merge old kelurahans with mapped new kecamatan IDs
+    old_with_new_parent_id = pd.merge(
+        old_df,
+        kecamatan_mapping_df[['old_id', 'new_id', 'status_mapping']].rename(columns={'old_id': 'kecamatan_id', 'new_id': 'mapped_new_kecamatan_id'}),
+        on='kecamatan_id',
+        how='left'
+    )
+
+    # Filter out those whose parent was not mapped
+    old_with_new_parent_id = old_with_new_parent_id[old_with_new_parent_id['status_mapping'] == 'mapped'].copy()
+
+    if old_with_new_parent_id.empty:
+        logger.warning("No old kelurahans to map after filtering by mapped kecamatans.")
+        return pd.DataFrame(columns=['old_id', 'old_name', 'normalized_name', 'new_id', 'status_mapping'])
+
+    # Prepare new data for merge
+    new_for_merge = new_df.rename(columns={'new_id': 'actual_new_id'})
+    new_for_merge = new_for_merge[['normalized_name', 'new_kecamatan_id', 'actual_new_id']]
+
+    # --- De-duplication Step ---
+    new_duplicates = new_for_merge[new_for_merge.duplicated(subset=['normalized_name', 'new_kecamatan_id'], keep=False)]
+    if not new_duplicates.empty:
+        logger.warning(f"Found duplicate normalized names in new kelurahans. Keeping first. Duplicates:\n{new_duplicates}")
+        new_for_merge.drop_duplicates(subset=['normalized_name', 'new_kecamatan_id'], keep='first', inplace=True)
+
+    old_duplicates = old_with_new_parent_id[old_with_new_parent_id.duplicated(subset=['normalized_name', 'mapped_new_kecamatan_id'], keep=False)]
+    if not old_duplicates.empty:
+        logger.warning(f"Found duplicate normalized names in old kelurahans. Keeping first. Duplicates:\n{old_duplicates}")
+        old_with_new_parent_id.drop_duplicates(subset=['normalized_name', 'mapped_new_kecamatan_id'], keep='first', inplace=True)
+
+    # Merge based on normalized name AND new parent ID
+    mapping_df = pd.merge(
+        old_with_new_parent_id,
+        new_for_merge,
+        left_on=['normalized_name', 'mapped_new_kecamatan_id'],
+        right_on=['normalized_name', 'new_kecamatan_id'],
+        how='left'
+    )
+
+    # Determine mapping status
+    mapping_df['status_mapping'] = mapping_df['actual_new_id'].apply(lambda x: 'mapped' if pd.notna(x) else 'not_found')
+    mapping_df['new_id'] = mapping_df['actual_new_id'].fillna(-1).astype(int)
+
+    # Final columns
+    mapping_df = mapping_df[['old_id', 'old_name', 'normalized_name', 'new_id', 'status_mapping']]
+
+    logger.info(f"Kelurahan mapping generated. Mapped: {mapping_df['status_mapping'].eq('mapped').sum()}")
+    return mapping_df
+
 if __name__ == '__main__':
     # This block will be executed if the script is run directly, useful for testing
     import sys
