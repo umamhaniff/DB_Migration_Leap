@@ -253,6 +253,34 @@ def generate_kelurahan_mapping(old_engine: Engine, new_engine: Engine, kecamatan
     logger.info(f"Kelurahan mapping generated. Mapped: {mapping_df['status_mapping'].eq('mapped').sum()}")
     return mapping_df
 
+
+def generate_all_region_mappings(old_engine: Engine, new_engine: Engine) -> dict:
+    """
+    Orchestrates the generation of all hierarchical region mapping tables.
+    Returns a dictionary where keys are region types (e.g., 'province', 'kabupaten')
+    and values are their respective mapping DataFrames.
+    """
+    all_mappings = {}
+
+    # 1. Province Mapping
+    province_map = generate_province_mapping(old_engine, new_engine)
+    all_mappings['province'] = province_map
+
+    # 2. Kabupaten Mapping (depends on province mapping)
+    kabupaten_map = generate_kabupaten_mapping(old_engine, new_engine, province_map)
+    all_mappings['kabupaten'] = kabupaten_map
+
+    # 3. Kecamatan Mapping (depends on kabupaten mapping)
+    kecamatan_map = generate_kecamatan_mapping(old_engine, new_engine, kabupaten_map)
+    all_mappings['kecamatan'] = kecamatan_map
+
+    # 4. Kelurahan Mapping (depends on kecamatan mapping)
+    kelurahan_map = generate_kelurahan_mapping(old_engine, new_engine, kecamatan_map)
+    all_mappings['kelurahan'] = kelurahan_map
+
+    logger.info("All region mappings generated successfully.")
+    return all_mappings
+
 if __name__ == '__main__':
     # This block will be executed if the script is run directly, useful for testing
     import sys

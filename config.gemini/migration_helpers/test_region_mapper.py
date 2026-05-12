@@ -2,7 +2,7 @@
 import pytest
 import pandas as pd
 from sqlalchemy import create_engine, text
-from .region_mapper import generate_province_mapping, generate_kabupaten_mapping, generate_kecamatan_mapping, generate_kelurahan_mapping
+from .region_mapper import generate_province_mapping, generate_kabupaten_mapping, generate_kecamatan_mapping, generate_kelurahan_mapping, generate_all_region_mappings
 
 @pytest.fixture
 def mock_db_engines_with_kelurahans():
@@ -81,3 +81,19 @@ def test_generate_kelurahan_mapping(mock_db_engines_with_kelurahans):
     # Test that kelurahans with unmapped parent are filtered out
     assert 1003 not in kelurahan_map_df['old_id'].values
     assert 1004 not in kelurahan_map_df['old_id'].values
+
+def test_generate_all_region_mappings(mock_db_engines_with_kelurahans):
+    old_engine, new_engine = mock_db_engines_with_kelurahans
+    all_maps = generate_all_region_mappings(old_engine, new_engine)
+
+    assert isinstance(all_maps, dict)
+    assert set(all_maps.keys()) == {'province', 'kabupaten', 'kecamatan', 'kelurahan'}
+
+    for name, df in all_maps.items():
+        assert isinstance(df, pd.DataFrame)
+        assert not df.empty
+    
+    assert len(all_maps['province']) == 1
+    assert len(all_maps['kabupaten']) == 1
+    assert len(all_maps['kecamatan']) == 2
+    assert len(all_maps['kelurahan']) == 3
