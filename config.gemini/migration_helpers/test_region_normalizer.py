@@ -12,9 +12,13 @@ def test_kota_prefix_normalization():
     assert normalize_region_name("kota MALANG") == "kota malang"
     assert normalize_region_name("KOTA JAKARTA PUSAT") == "kota jakarta pusat"
 
+def test_provinsi_prefix_normalization():
+    assert normalize_region_name("PROVINSI JAWA TIMUR") == "jawa timur"
+    assert normalize_region_name("Provinsi. Bali") == "bali"
+
 def test_mixed_case_and_whitespace():
     assert normalize_region_name("  jakarta  ") == "jakarta"
-    assert normalize_region_name("PROVINSI BANTEN") == "provinsi banten"
+    assert normalize_region_name("PROVINSI BANTEN") == "banten"
     assert normalize_region_name("JAWA BARAT") == "jawa barat"
 
 def test_no_prefix():
