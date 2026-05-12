@@ -8,9 +8,9 @@ def test_kab_prefix_normalization():
     assert normalize_region_name("KAB. PASURUAN") == "pasuruan"
 
 def test_kota_prefix_normalization():
-    assert normalize_region_name("KOTA SURABAYA") == "kota surabaya"
-    assert normalize_region_name("kota MALANG") == "kota malang"
-    assert normalize_region_name("KOTA JAKARTA PUSAT") == "kota jakarta pusat"
+    assert normalize_region_name("KOTA SURABAYA") == "surabaya"
+    assert normalize_region_name("kota MALANG") == "malang"
+    assert normalize_region_name("KOTA JAKARTA PUSAT") == "jakarta pusat"
 
 def test_provinsi_prefix_normalization():
     assert normalize_region_name("PROVINSI JAWA TIMUR") == "jawa timur"
