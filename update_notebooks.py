@@ -68,6 +68,147 @@ if 'siswa_keluar' in raw_data:
 
             source = source.replace(old_siswa_keluar, new_siswa_keluar)
             
+            # --- UPDATE SISWA & MITRA GEO MAPPING ---
+            old_siswa_transform = """# 1. siswa -> siswa
+if 'siswa' in raw_data:
+    df = pd.DataFrame(raw_data['siswa'])
+    df['idmitra_int'] = df['idmitra'].apply(extract_int)
+    
+    # Normalisasi Agama"""
+
+            new_siswa_transform = """# 1. siswa -> siswa
+if 'siswa' in raw_data:
+    df = pd.DataFrame(raw_data['siswa'])
+    df['idmitra_int'] = df['idmitra'].apply(extract_int)
+
+    # Fetch region tables from both databases to build hierarchical name mappings (Read-only lookup)
+    cursor_old.execute("SELECT idprovinsi, nama FROM provinsi")
+    df_old_prov = pd.DataFrame(cursor_old.fetchall())
+    cursor_new.execute("SELECT id_provinsi, nama_provinsi FROM provinsi")
+    df_new_prov = pd.DataFrame(cursor_new.fetchall())
+
+    cursor_old.execute("SELECT idkabupaten, idprovinsi, name FROM kabupaten")
+    df_old_kab = pd.DataFrame(cursor_old.fetchall())
+    cursor_new.execute("SELECT id_kabupaten, id_provinsi, nama_kabupaten FROM kabupaten")
+    df_new_kab = pd.DataFrame(cursor_new.fetchall())
+
+    cursor_old.execute("SELECT idkecamatan, idkabupaten, nama FROM kecamatan")
+    df_old_kec = pd.DataFrame(cursor_old.fetchall())
+    cursor_new.execute("SELECT id_kecamatan, id_kabupaten, nama_kecamatan FROM kecamatan")
+    df_new_kec = pd.DataFrame(cursor_new.fetchall())
+
+    cursor_old.execute("SELECT idkelurahan, idkecamatan, nama FROM kelurahan")
+    df_old_kel = pd.DataFrame(cursor_old.fetchall())
+    cursor_new.execute("SELECT id_kelurahan, id_kecamatan, nama_kelurahan FROM kelurahan")
+    df_new_kel = pd.DataFrame(cursor_new.fetchall())
+
+    def clean_wil_name(s):
+        if pd.isna(s): return ""
+        s = str(s).strip().lower()
+        
+        # Remove administrative words/abbreviations as whole words, including optional dot
+        s = re.sub(r'\\b(kabupaten|kab|kota|kecamatan|kec|kelurahan|kel|desa|adm)\\b\\.?', '', s)
+        
+        # Replace special punctuation/characters
+        s = s.replace('\\'', '').replace('`', '').replace('-', ' ')
+        s = re.sub(r'\\s+', ' ', s).strip()
+        return s
+
+    df_old_prov['clean'] = df_old_prov['nama'].apply(clean_wil_name)
+    df_new_prov['clean'] = df_new_prov['nama_provinsi'].apply(clean_wil_name)
+    df_old_kab['clean'] = df_old_kab['name'].apply(clean_wil_name)
+    df_new_kab['clean'] = df_new_kab['nama_kabupaten'].apply(clean_wil_name)
+    df_old_kec['clean'] = df_old_kec['nama'].apply(clean_wil_name)
+    df_new_kec['clean'] = df_new_kec['nama_kecamatan'].apply(clean_wil_name)
+    df_old_kel['clean'] = df_old_kel['nama'].apply(clean_wil_name)
+    df_new_kel['clean'] = df_new_kel['nama_kelurahan'].apply(clean_wil_name)
+
+    prov_map = {}
+    for _, row in df_old_prov.iterrows():
+        match = df_new_prov[df_new_prov['clean'] == row['clean']]
+        if not match.empty:
+            prov_map[row['idprovinsi']] = match.iloc[0]['id_provinsi']
+
+    kab_map = {}
+    df_new_kab['key'] = df_new_kab['clean'] + "_" + df_new_kab['id_provinsi'].astype(str)
+    for _, row in df_old_kab.iterrows():
+        new_prov_id = prov_map.get(row['idprovinsi'])
+        if new_prov_id:
+            key = row['clean'] + "_" + str(new_prov_id)
+            match = df_new_kab[df_new_kab['key'] == key]
+            if not match.empty:
+                kab_map[row['idkabupaten']] = match.iloc[0]['id_kabupaten']
+
+    kec_map = {}
+    df_new_kec['key'] = df_new_kec['clean'] + "_" + df_new_kec['id_kabupaten'].astype(str)
+    for _, row in df_old_kec.iterrows():
+        new_kab_id = kab_map.get(row['idkabupaten'])
+        if new_kab_id:
+            key = row['clean'] + "_" + str(new_kab_id)
+            match = df_new_kec[df_new_kec['key'] == key]
+            if not match.empty:
+                kec_map[row['idkecamatan']] = match.iloc[0]['id_kecamatan']
+
+    # Vectorized merge for Kelurahan mapping (Instant 1-second mapping for 83k rows!)
+    df_old_kel['new_kec_id'] = df_old_kel['idkecamatan'].map(kec_map)
+    df_old_kel_filtered = df_old_kel.dropna(subset=['new_kec_id']).copy()
+    df_old_kel_filtered['new_kec_id'] = df_old_kel_filtered['new_kec_id'].astype(int)
+
+    df_merged_kel = pd.merge(
+        df_old_kel_filtered,
+        df_new_kel,
+        left_on=['new_kec_id', 'clean'],
+        right_on=['id_kecamatan', 'clean'],
+        how='inner'
+    )
+    kel_map = dict(zip(df_merged_kel['idkelurahan'], df_merged_kel['id_kelurahan']))
+
+    df['id_provinsi'] = df['provinsi'].map(prov_map)
+    df['id_kabupaten'] = df['kabupaten'].map(kab_map)
+    df['id_kecamatan'] = df['kecamatan'].map(kec_map)
+    df['id_kelurahan'] = df['kelurahan'].map(kel_map)
+    
+    # Normalisasi Agama"""
+
+            source = source.replace(old_siswa_transform, new_siswa_transform)
+
+            old_siswa_mapping = """        'provinsi': 'id_provinsi', 'kabupaten': 'id_kabupaten', 'kecamatan': 'id_kecamatan',
+        'kelurahan': 'id_kelurahan', 'idmitra_int': 'id_mitra',"""
+
+            new_siswa_mapping = """        'id_provinsi': 'id_provinsi', 'id_kabupaten': 'id_kabupaten', 'id_kecamatan': 'id_kecamatan',
+        'id_kelurahan': 'id_kelurahan', 'idmitra_int': 'id_mitra',"""
+
+            source = source.replace(old_siswa_mapping, new_siswa_mapping)
+
+            old_mitra_transform = """# 4. mitra -> mitra
+if 'mitra' in raw_data:
+    df = pd.DataFrame(raw_data['mitra'])
+    df['id_mitra_new'] = df['idmitra'].apply(extract_int)
+    df['kode_mitra'] = df['idmitra'].apply(extract_chars)
+    
+    bool_cols = ['leapverse', 'kemitraan', 'elsa', 'classin', 'mitraleap']"""
+
+            new_mitra_transform = """# 4. mitra -> mitra
+if 'mitra' in raw_data:
+    df = pd.DataFrame(raw_data['mitra'])
+    df['id_mitra_new'] = df['idmitra'].apply(extract_int)
+    df['kode_mitra'] = df['idmitra'].apply(extract_chars)
+    
+    df['provinsi_id'] = df['provinsi'].map(prov_map)
+    df['kabupaten_id'] = df['kotkab'].map(kab_map)
+    
+    bool_cols = ['leapverse', 'kemitraan', 'elsa', 'classin', 'mitraleap']"""
+
+            source = source.replace(old_mitra_transform, new_mitra_transform)
+
+            old_mitra_mapping = """        'rekomen': 'rekomendasi_program', 'jenis': 'jenis_mitra', 'provinsi': 'provinsi_id',
+        'kotkab': 'kabupaten_id',"""
+
+            new_mitra_mapping = """        'rekomen': 'rekomendasi_program', 'jenis': 'jenis_mitra', 'provinsi_id': 'provinsi_id',
+        'kabupaten_id': 'kabupaten_id',"""
+
+            source = source.replace(old_mitra_mapping, new_mitra_mapping)
+            
             # Update source list
             cell['source'] = [line + '\n' for line in source.split('\n')]
             if cell['source'][-1] == '\n': cell['source'].pop()

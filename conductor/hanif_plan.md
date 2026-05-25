@@ -12,18 +12,18 @@ The user requested to audit the column mapping implementation from `hanif_mappin
 
 **Implementation Steps:**
 
-- [ ] **Step 1: Execute & Debug Fase 3**
+- [x] **Step 1: Execute & Debug Fase 3**
   - Run `fase_3/script_hanif.ipynb` via Python or `nbconvert`.
   - Verify that `extract_date`, `parse_date`, and `clean_currency` handle all existing data without throwing exceptions.
   - If errors occur, patch `fase_3/script_hanif.ipynb`.
 
-- [ ] **Step 2: Execute & Debug Fase 4**
+- [x] **Step 2: Execute & Debug Fase 4**
   - Run `fase_4/script_hanif.ipynb`.
   - Validate `detect_tag` and enum mappings (`agama`, `pekerjaan_ayah`, etc.).
   - Check if empty tables `siswa_mitra` and `siswa_mitra_keluar` cause any pipeline breaks downstream.
   - Fix any runtime errors.
 
-- [ ] **Step 3: Execute & Debug Fase 5**
+- [x] **Step 3: Execute & Debug Fase 5**
   - Run `fase_5/script_hanif.ipynb`.
   - Verify that the updated lookup logic (using `merge` instead of dictionary mapping for `rapor_siswa_file` and `rapor_lacak`) correctly joins the data.
   - Fix any runtime errors.
