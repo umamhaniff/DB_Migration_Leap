@@ -1,4 +1,5 @@
 extract/
+backup/
 
 # Virtual Environment
 venv/
