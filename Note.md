@@ -36,4 +36,56 @@ TABEL: KELUARGA_KARYAWAN
 ================================================
 
 TABEL: KELURAHAN
-- kode_pos this is all null, then what for?
+- kode_pos this is all null, then what for? #programmer
+
+
+================================================
+        FASE 3 - THE THINGS WE SHOULD CHANGE
+================================================
+
+TABEL: PELAMAR
+
+cuz this table cant in into the database please update the id_pelamar into auto increment then update the child table too.
+        - pelamar_kerja (id_pelamar)
+        - pelamar_kursus (id_pelamar)
+        - pelamar_sekolah (id_pelamar)
+        - progres_pelamar (id_pelamar)
+        - rekrutmen_pelamar (id_pelamar)
+
+================================================
+
+TABEL: KONTAK_PROSPEK
+- delete column created_at and updated_at
+- column nama_penanya kosong ga ada datanya (not null)
+- column status_kontak (not null)
+
+TABEL: CALON_SISWA
+- Delete column sumber_lead (are you sure this is erase) #programmer, status_pipeline, status_updated_at 
+- Add column agama, fo_status, fo_status_updated_at, handover_at, latest_submitted_at, first_submitted_at 
+- why we need this (fo_status, fo_status_updated_at, handover_at) when the table already connect into table KONTAK_PROSPEK #programmer
+- anw this column wa_kontak_awal should be deleted cuz already in table KONTAK_PROSPEK
+- on this column jenis_kelamin they are a few table who empty but not missing value
+- ga di ambil buat table 
+        - calon_siswa_bayar (id_calon)
+        - calon_siswa_jadwal (id_calon)
+        - calon_siswa_proses (id_calon)
+
+TABEL: CALON_SISWA_AKADEMIK
+- why this table id_calon_akademik connect into so many othey table #programmer
+        - calon_siswa_bayar (id_calon_akademik)
+        - calon_siswa_jadwal (id_calon_akademik)
+        - calon_siswa_proses (id_calon_akademik)
+        - calon_siswa_proses_logs (id_calon_akademik)
+- add new colomn submission_state (not null) but idk what should i add in this column #programmer
+- add new colomn submitted_at
+- Bersihin jenjang_kelas_1 and jenjang_kelas_2
+- is that okkey for column id_kursus to be index not fk? #programmer
+
+TABEL: CALON_SISWA_ORTU
+- add column tempat_lahir_ayah, tanggal_lahir_ayah, tempat_lahir_ibu, tanggal_lahir_ibu, tempat_lahir_wali, tanggal_lahir_wali.
+- Update enum penghasilan from Kurang dari 1 Juta,1 Juta - 3 Juta,3 Juta - 5 Juta,Lebih dari 5 Juta into 	kurang_1jt,1jt_3jt,3jt_5jt,lebih_5jt
+
+TABEL: CALON_SISWA_BAYAR
+- column id_calon change into column id_calon_akademik
+- delete column status_siswa why? #programmer
+- 
