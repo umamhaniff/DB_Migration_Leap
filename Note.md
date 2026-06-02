@@ -111,3 +111,67 @@ TABEL: SURAT_TUGAS
 TABEL: CALON_SISWA_KURSUS
 - column jenis_program emg kosong kah?
 
+================================================
+        FASE 4 - THE THINGS WE SHOULD CHANGE
+================================================
+
+TABEL: IZIN_KARYAWAN
+- column id_karyawan update colomn ini jadi int
+
+TABEL: ABSENSI
+- column id_karyawan update colomn ini jadi int
+
+TABEL: KARYAWAN_RESIGN
+- column id_karyawan update colomn ini jadi int
+
+TABEL: JADWAL_DETAIL
+- add colomn presensi_disimpan_at
+
+TABEL: JADWAL_SISWA
+- add column is_acc_rapor, status_ketuntasan, catatan_ketuntasan_guru, catatan_ketuntasan_admin, ketuntasan_diperbarui_oleh, ketuntasan_diperbarui_pada
+
+TABEL: CATATAN_KELAS
+- add column id_karyawan
+
+TABEL: SISWA
+- delete column status_aktif, status_lulus_siswa
+- new column status_pendaftaran
+
+TABEL: KURSUS_SISWA
+- new column status_lulus
+
+================================================
+
+TABEL: MITRA
+- ada isinya, kok bisa?? tapi cuma 1 just asking
+
+================================================
+        FASE 5 - THE THINGS WE SHOULD CHANGE
+================================================
+
+TABEL: RAPOR_FORMAT
+- add column urutan
+
+TABEL: RAPOR_FORMAT_SUB
+- add column urutan
+
+TABEL: RAPOR_FORMAT_FORMULA_SUB
+- add column urutan
+
+TABEL: RAPOR_LEVEL_CONFIG
+- column id_rapor_format, id_level just index need check
+
+TABEL: CATATAN_SISWA
+- add column id_karyawan, tanggal
+
+================================================
+
+TABEL: RAPOR_SISWA_FILE
+- all row in column id_rapor_siswa was null
+
+================================================
+        TABLE BARU 
+================================================
+catatan_remidi_siswa 
+siswa_keluar_feedbacks 
+
