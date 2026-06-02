@@ -88,4 +88,26 @@ TABEL: CALON_SISWA_ORTU
 TABEL: CALON_SISWA_BAYAR
 - column id_calon change into column id_calon_akademik
 - delete column status_siswa why? #programmer
-- 
+
+TABEL: CALON_SISWA_JADWAL
+- column id_calon change into column id_calon_akademik
+- delete column konfirmasi_tes, konfirmasi_trial why? #programmer
+
+TABEL: CALON_SISWA_PROSES
+- column id_calon change into column id_calon_akademik (tapi ga nyambung ke tablenya wtf)
+- this column admin_pengontak should be deleted cuz in table kontak_prospek already has it.
+- delete column status_siswa why? #programmer
+- add new column sumber_lead, status_updated_at
+- delete column updated_at, created_at
+
+TABEL: VERIFIKASI_SURAT_KELUAR
+- in db_future this column catatan_verifikasi_sk was 🛑 NOT NULL (Wajib Isi) and i think this should be null. #programmer
+
+TABEL: SURAT_TUGAS
+- add new column periode
+
+================================================
+
+TABEL: CALON_SISWA_KURSUS
+- column jenis_program emg kosong kah?
+
