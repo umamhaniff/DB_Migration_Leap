@@ -169,9 +169,17 @@ TABEL: CATATAN_SISWA
 TABEL: RAPOR_SISWA_FILE
 - all row in column id_rapor_siswa was null
 
-================================================
-        TABLE BARU 
-================================================
-catatan_remidi_siswa 
-siswa_keluar_feedbacks 
 
+================================================
+        TABLE BARU
+================================================
+
+calon_siswa_fo_detail
+calon_siswa_form_program_requirements
+calon_siswa_form_programs
+calon_siswa_proses_logs
+catatan_remidi_siswa
+penilaian_kinerja
+rapor_setting_kursus
+siswa_bulk_edit_logs
+siswa_keluar_feedbacks
