@@ -290,3 +290,45 @@
 | history_rapor | | rapor_lacak | id_rapor_siswa_file | cari id_rapor_siswa_file di rapor_siswa_file |
 
 ---
+
+## Perubahan Baru uda sesuai dengan note.md di fase 6
+
+### Fase 3
+TABEL: PELAMAR
+cuz this table cant in into the database please update the id_pelamar into auto increment then update the child table too.
+        - pelamar_kerja (id_pelamar)
+        - pelamar_kursus (id_pelamar)
+        - pelamar_sekolah (id_pelamar)
+        - progres_pelamar (id_pelamar)
+        - rekrutmen_pelamar (id_pelamar)
+
+### Fase 4 
+TABEL: SISWA
+- delete column status_aktif, status_lulus_siswa (done)
+- new column status_pendaftaran (mapping baru dengan tujuan kolom statussiswa di Tabel Siswa db_old)
+
+TABEL: KURSUS_SISWA
+- new column status_lulus
+(status_lulus_siswa di Tabel Siswa db_new yang dihapus di pindah ke Tabel Kursus_Siswa db_new atau ngambil dari mapping db_old nya langsung dr pada 3 kali ETL nya, tapi ada masalah di id_kursus gatau ngambil dari mna nya karna tabel Kursus_siswa ini tabel baru jadi masih butuh konfirmasi dari PM) - Next, Skip dlu
+
+TABEL: MITRA
+- ada isinya, kok bisa?? tapi cuma 1 just asking
+(isi nya ga lengkap kek nyaa mungkin karna ETL yang kurang di code nya)
+
+### Fase 5
+TABEL: RAPOR_SISWA_FILE
+- all row in column id_rapor_siswa was null
+(note: sepertinya Baris kosong padahal di db_old ada isi nya ini karna code nya ga berhasil atau ada yang salah)
+
+Masih Menunggu Konfirmasi action dari PM - Next, Skip dlu:
+
+TABEL: RAPOR_FORMAT
+- add column urutan
+
+TABEL: RAPOR_FORMAT_SUB
+- add column urutan
+
+TABEL: RAPOR_FORMAT_FORMULA_SUB
+- add column urutan
+
+---

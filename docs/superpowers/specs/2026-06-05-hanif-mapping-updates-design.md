@@ -2,17 +2,17 @@
 
 **Date:** 2026-06-05  
 **Author:** Hanif (Pair-programmed with Antigravity)  
-**Status:** Approved by User  
-**Scope:** Fase 3 (Pelamar & Child Tables), Fase 4 (Siswa & Mitra), Fase 5 (Rapor Siswa File)
+**Status:** Under Review  
+**Scope:** Fase 3 (Pelamar & Child Tables), Fase 4 (Siswa & Mitra), Fase 5 (Rapor Siswa File Audit)
 
 ---
 
 ## 🎯 1. Objective
-Update and refine the ETL pipeline notebooks (`script_hanif.ipynb`) for Fase 3, Fase 4, and Fase 5 to align with database constraint changes and fix data integrity issues identified in the target database (`dataleap_v5_migration`).
+Update and refine the ETL pipeline notebooks (`script_hanif.ipynb`) for Fase 3 and Fase 4 to align with database constraint changes. Additionally, audit the Fase 5 notebook to identify why `id_rapor_siswa` in `rapor_siswa_file` fails to populate (NULL) in the target database (`dataleap_v5_migration`).
 
 ---
 
-## 🏗️ 2. Detailed Technical Design
+## 🏗️ 2. Detailed Technical Design & Audit
 
 ### 🟢 2.1 Fase 3: Applicant ID Auto-Increment Mapping
 * **Target Notebook:** `fase_3/script_hanif.ipynb`
@@ -28,28 +28,29 @@ Update and refine the ETL pipeline notebooks (`script_hanif.ipynb`) for Fase 3, 
 
 ### 🔴 2.2 Fase 4: Student & Partner Updates
 * **Target Notebook:** `fase_4/script_hanif.ipynb`
-* **Goal:** Implement the new `status_pendaftaran` column for students and ensure complete data migration for partners.
+* **Goal:** Implement the new `status_pendaftaran` column for students and verify the completeness of columns for partners.
 * **Student Transformation Logic (`siswa`):**
   1. Remove `status_aktif` and `status_lulus_siswa` from column mapping.
   2. Add new column `status_pendaftaran`.
   3. Map `status_pendaftaran` directly from column `statussiswa` (varchar) in the old database.
 * **Partner Transformation Logic (`mitra`):**
-  1. Audit mapping of all columns in `mitra` to ensure complete data extraction (such as address, contact, dsb.).
-  2. Update the insert handler (`fase_4/insert_handler.ipynb`) to execute a `DELETE` query for any partial/testing data in the target `mitra` table before inserting the migrated rows.
+  1. Audit mapping of all columns in `mitra` to ensure complete data extraction (such as address, contact, dsb.). *Note: Data insertion handler fixes are handled by the coordinator/integration team, not in Hanif's script.*
 
 ---
 
-### 🟣 2.3 Fase 5: Report Card File Mapping
+### 🟣 2.3 Fase 5: Report Card File Code Audit
 * **Target Notebook:** `fase_5/script_hanif.ipynb`
-* **Goal:** Resolve `NULL` values in the `id_rapor_siswa` column in `rapor_siswa_file` table.
-* **Transformation Logic:**
-  1. Fetch the newly inserted `rapor_siswa` records (containing columns: `id_rapor_siswa` [bigint auto-increment], `id_siswa`, and `id_jadwal`) from the target database (`db_new`).
-  2. In `script_hanif.ipynb`, merge the old `file_rapor_siswa` DataFrame with the fetched `rapor_siswa` table on `id_siswa` and `id_jadwal` to resolve the valid `id_rapor_siswa` integer.
-  3. Save the mapped records to `fase_5_hanif.pkl`.
+* **Goal:** Audit the transformation logic to identify why `id_rapor_siswa` in `rapor_siswa_file` is populated as NULL in `db_new`.
+* **Findings & Diagnoses:**
+  1. In the target database (`db_new`), the column `id_rapor_siswa` in table `rapor_siswa` is defined as a `bigint(20) AUTO_INCREMENT` (integer).
+  2. In `fase_5/script_hanif.ipynb`, the transformation code maps `idrapor` (which has string values like `'R005457'`) directly to `id_rapor_siswa` in both `rapor_siswa` and `rapor_siswa_file`.
+  3. When inserting `'R005457'` into the target `bigint` columns, MySQL fails to cast the string to an integer, resulting in NULL values (or 0) for the foreign key.
+* **Recommendation:**
+  * Report these findings to the database administrator or integration coordinator. The database table `rapor_siswa` must either maintain the original string PKs, or the integration coordinator needs to provide a mapping table to translate string IDs to the newly generated bigint auto-increment IDs.
 
 ---
 
-## 🛠️ 4. Execution & Validation Plan
-1. Apply changes programmatically to `fase_3/script_hanif.ipynb`, `fase_4/script_hanif.ipynb`, and `fase_5/script_hanif.ipynb`.
-2. Run notebook cells and generate new Pickle files (`fase_3_hanif.pkl`, `fase_4_hanif.pkl`, `fase_5_hanif.pkl`).
-3. Verify that all mapped IDs are correctly populated and no runtime errors occur.
+## 🛠️ 3. Execution & Validation Plan
+1. Apply changes programmatically to `fase_3/script_hanif.ipynb` and `fase_4/script_hanif.ipynb`.
+2. Run notebook cells and generate new Pickle files (`fase_3_hanif.pkl`, `fase_4_hanif.pkl`).
+3. Document audit findings for Fase 5 in the project logs.
