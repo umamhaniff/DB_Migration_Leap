@@ -1,0 +1,67 @@
+================================================================================
+AUDIT REPORT (REVISED): FASE 5 - MIGRATION BUG ON rapor_siswa_file (id_rapor_siswa IS NULL)
+================================================================================
+
+1. TEMUAN UTAMA (KEY FINDINGS)
+   - Kolom `id_rapor_siswa` di tabel target `rapor_siswa_file` (db_new) bernilai NULL
+     pada hasil akhir migrasi di database.
+   - Hal ini disebabkan oleh ketidakselarasan antara tipe data string (varchar) 
+     pada ID lama dengan tipe data integer (bigint) pada ID baru, serta tidak adanya
+     proses mapping ID dari string ke integer di notebook ETL `fase_5/script_hanif.ipynb`.
+
+2. ANALISIS MENDALAM (ROOT CAUSES)
+
+   A. Perbedaan Tipe ID Lama vs Baru
+      - ID Rapor Lama (`db_old.rapor.idrapor`): Berupa string/varchar seperti 'R005457'.
+      - ID Rapor Baru (`db_new.rapor_siswa.id_rapor_siswa`): Berupa BIGINT AUTO_INCREMENT.
+      - ID Rapor File Baru (`db_new.rapor_siswa_file.id_rapor_siswa`): Berupa BIGINT.
+
+   B. Mekanisme Auto-Increment di Database
+      - Di notebook `fase_5/script_hanif.ipynb` langkah 7, `'idrapor'` langsung di-rename
+        menjadi `'id_rapor_siswa'` tanpa konversi integer, sehingga DataFrame menyimpan
+        string 'R000154'.
+      - Saat dimasukkan ke `db_new.rapor_siswa`, MySQL menerima string 'R000154' pada kolom
+        BIGINT AUTO_INCREMENT. MySQL mengabaikan nilai string tersebut (dikonversi ke 0) 
+        dan otomatis membuat ID integer baru (1, 2, 3, dst.) secara internal.
+      - Akibatnya, ID baru yang terbuat di database berbentuk integer, sedangkan data
+        pada file Pickle tetap menggunakan format ID string lama ('R000154').
+
+   C. Kegagalan FK pada tabel `rapor_siswa_file`
+      - Di notebook langkah 8, tabel `rapor_siswa_file` mengambil `id_rapor_siswa` dari
+        ID lama (string 'R005457') melalui proses merge.
+      - Saat data string ini dicoba dimasukkan ke tabel `db_new.rapor_siswa_file` pada kolom 
+        `id_rapor_siswa` (BIGINT), MySQL mengonversinya menjadi 0 / NULL karena tipenya 
+        tidak cocok.
+      - Karena tidak ada data `id_rapor_siswa = 0` di tabel `rapor_siswa` (yang berisi 1, 2, 3...),
+        relasi FK tersebut menjadi tidak valid dan akhirnya bernilai NULL.
+
+3. REKOMENDASI SOLUSI (SOLVED IN script_hanif.ipynb)
+   
+   Masalah ini dapat diselesaikan sepenuhnya di dalam script ETL milik Hanif (`fase_5/script_hanif.ipynb`) 
+   tanpa perlu mengubah skema database ataupun merubah file `insert_handler.ipynb`:
+
+   Langkah 1: Generate Integer ID secara Lokal di Langkah 7 (`rapor -> rapor_siswa`)
+      - Buat pemetaan ID integer secara lokal menggunakan `.reset_index()` seperti pada Fase 3.
+      - Contoh implementasi kode:
+        ```python
+        # Generate integer ID auto-increment mapping secara lokal
+        df = df.reset_index()
+        df['id_rapor_siswa_new'] = df['index'] + 1
+        rapor_id_map = dict(zip(df['idrapor'], df['id_rapor_siswa_new']))
+        df['id_rapor_siswa'] = df['id_rapor_siswa_new']
+        ```
+      - Dengan ini, database akan merekam nilai integer eksplisit (1, 2, 3...) yang kita kirim
+        dan tidak perlu meng-generate ID auto-increment acak.
+
+   Langkah 2: Map ID Baru di Langkah 8 (`file_rapor_siswa -> rapor_siswa_file`)
+      - Gunakan dictionary `rapor_id_map` yang dibuat di Langkah 1 untuk memetakan kolom 
+        `id_rapor_siswa` pada `rapor_siswa_file` dari format string lama ke format integer baru.
+      - Contoh implementasi kode:
+        ```python
+        df_rapor_old = pd.DataFrame(raw_data['rapor'])[['idsiswa', 'idjadwal', 'idrapor']].drop_duplicates(subset=['idsiswa', 'idjadwal'])
+        df = df.merge(df_rapor_old, on=['idsiswa', 'idjadwal'], how='left')
+        df['id_rapor_siswa'] = df['idrapor'].map(rapor_id_map).astype('Int64')
+        ```
+      - Hasil data yang masuk ke Pickle dan database kini akan sinkron menggunakan integer ID yang sama.
+
+================================================================================
