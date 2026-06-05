@@ -17,7 +17,23 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
 
 ---
 
-## 🛠️ Cara Kerja Transformasi & Sinkronisasi Notebook
+* File `.ipynb` dimodifikasi secara terprogram menggunakan script pendukung **`update_notebooks.py`** dan script patching khusus **`config.gemini/apply_migration_updates.py`**.
+* Setelah `apply_migration_updates.py` dijalankan, notebook Jupyter terkait akan terperbaharui secara otomatis tanpa merusak struktur internal JSON notebook.
 
-* File `.ipynb` dimodifikasi secara terprogram menggunakan script pendukung **`update_notebooks.py`**.
-* Setelah `update_notebooks.py` dijalankan, notebook Jupyter terkait akan terperbaharui secara otomatis tanpa merusak struktur internal JSON notebook.
+---
+
+## 📈 Perkembangan Terakhir (Per 5 Juni 2026)
+
+1. **Fase 3 (Selesai)**:
+   * Mengubah `id_pelamar` di tabel `pelamar` menjadi integer auto-increment.
+   * Memetakan kolom `id_pelamar` di 5 tabel anak (`pelamar_kerja`, `pelamar_sekolah`, `pelamar_kursus`, `progres_pelamar`, `rekrutmen_pelamar`) menjadi tipe data `Int64` yang sinkron dengan ID induk baru.
+2. **Fase 4 (Selesai)**:
+   * Menambahkan kolom `status_pendaftaran` pada tabel `siswa` langsung dari kolom `statussiswa` (varchar) database lama, serta menghapus kolom `status_aktif` dan `status_lulus_siswa` dari mapping.
+   * Mengubah looping mapping kelurahan yang lambat menjadi vectorized `.merge()` (memangkas durasi ETL dari jam-jaman menjadi kurang dari 15 detik).
+   * Melakukan audit kelengkapan kolom pada tabel `mitra`.
+3. **Fase 5 (Selesai)**:
+   * Menyelesaikan masalah nilai `id_rapor_siswa` yang NULL pada tabel `rapor_siswa_file` dan `id_rapor_siswa_file` yang NULL di `rapor_lacak` dengan pemetaan ID integer lokal di python sebelum ekspor Pickle.
+4. **Validasi & Sinkronisasi**:
+   * Menambahkan test suite [test_migration_pickles.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/test_migration_pickles.py) untuk memastikan file Pickle hasil regenerasi (`fase_3_hanif.pkl`, `fase_4_hanif.pkl`, `fase_5_hanif.pkl`) valid 100%.
+   * Laporan detail audit Fase 5 disimpan di [config.gemini/audit_fase_5.txt](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/audit_fase_5.txt).
+
