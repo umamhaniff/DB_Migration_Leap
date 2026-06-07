@@ -10,7 +10,7 @@ Question
 
 TABEL: ROLES
 - add column id_division 
-Qe=uestion
+Qeuestion
 - Did in the db old have information about this if they dont. that should be fine if we just insert the data we have rn - so the id_division was null
 
 ================================================
@@ -32,12 +32,6 @@ TABEL: KARYAWAN
 
 TABEL: KELUARGA_KARYAWAN
 - change the id_karyawan cuz after this, this gonna be auto increment
-
-================================================
-
-TABEL: KELURAHAN
-- kode_pos this is all null, then what for? #programmer
-
 
 ================================================
         FASE 3 - THE THINGS WE SHOULD CHANGE
@@ -62,10 +56,9 @@ TABEL: KONTAK_PROSPEK
 TABEL: CALON_SISWA
 - Delete column sumber_lead (are you sure this is erase) #programmer, status_pipeline, status_updated_at 
 - Add column agama, fo_status, fo_status_updated_at, handover_at, latest_submitted_at, first_submitted_at 
-- why we need this (fo_status, fo_status_updated_at, handover_at) when the table already connect into table KONTAK_PROSPEK #programmer
 - anw this column wa_kontak_awal should be deleted cuz already in table KONTAK_PROSPEK
 - on this column jenis_kelamin they are a few table who empty but not missing value
-- ga di ambil buat table 
+- ga di ambil buat table
         - calon_siswa_bayar (id_calon)
         - calon_siswa_jadwal (id_calon)
         - calon_siswa_proses (id_calon)
@@ -76,10 +69,9 @@ TABEL: CALON_SISWA_AKADEMIK
         - calon_siswa_jadwal (id_calon_akademik)
         - calon_siswa_proses (id_calon_akademik)
         - calon_siswa_proses_logs (id_calon_akademik)
-- add new colomn submission_state (not null) but idk what should i add in this column #programmer
+- add new colomn submission_state (not null) 
 - add new colomn submitted_at
 - Bersihin jenjang_kelas_1 and jenjang_kelas_2
-- is that okkey for column id_kursus to be index not fk? #programmer
 
 TABEL: CALON_SISWA_ORTU
 - add column tempat_lahir_ayah, tanggal_lahir_ayah, tempat_lahir_ibu, tanggal_lahir_ibu, tempat_lahir_wali, tanggal_lahir_wali.
@@ -117,12 +109,14 @@ TABEL: CALON_SISWA_KURSUS
 
 TABEL: IZIN_KARYAWAN
 - column id_karyawan update colomn ini jadi int
+- cocokin id lama sama id baru dulu mapping_id_karyawan.
 
 TABEL: ABSENSI
 - column id_karyawan update colomn ini jadi int
 
 TABEL: KARYAWAN_RESIGN
 - column id_karyawan update colomn ini jadi int
+- cocokin id lama sama id baru dulu pake mapping_id_karyawan.
 
 TABEL: JADWAL_DETAIL
 - add colomn presensi_disimpan_at
