@@ -291,7 +291,7 @@
 
 ---
 
-## Perubahan Baru uda sesuai dengan note.md di fase 6
+## Perubahan Baru yang ada di fase_6/node.md
 
 ### Fase 3
 TABEL: PELAMAR
@@ -330,5 +330,17 @@ TABEL: RAPOR_FORMAT_SUB
 
 TABEL: RAPOR_FORMAT_FORMULA_SUB
 - add column urutan
+
+---
+
+## Yang belum selesai (SKIP DULU BELUM ADA INFO LEBIH LANJUT)
+
+### Problem dari awal Mapping
+- Fase 3 : Tabel Pelamar_kerja; Tabel Pelamar_kursus; Tabel Pelamar_sekolah (di db_old ada FK dari iduser sedangkan di db_new FK dari id_pelamar jadi ga tau data flow nya gmn untuk nuker iduser dengan id_pelamar)
+- Fase 4 : Tabel Siswa Keluar (id_kursus belum ada)
+
+### Problem Perubahan Baru di fase_6/note.md
+- Fase 4 : Tabel Kursus_Siswa
+- Fase 5 : Tabel Rapor_Format; Tabel Rapor_Format_Sub; Tabel Rapor_Format_Formula_Sub
 
 ---
