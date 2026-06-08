@@ -111,12 +111,12 @@ TABEL: IZIN_KARYAWAN
 - column id_karyawan update colomn ini jadi int
 - cocokin id lama sama id baru dulu mapping_id_karyawan.
 
-TABEL: ABSENSI
-- column id_karyawan update colomn ini jadi int
-
 TABEL: KARYAWAN_RESIGN
 - column id_karyawan update colomn ini jadi int
 - cocokin id lama sama id baru dulu pake mapping_id_karyawan.
+
+TABEL: ABSENSI
+- column id_karyawan update colomn ini jadi int
 
 TABEL: JADWAL_DETAIL
 - add colomn presensi_disimpan_at
