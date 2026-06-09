@@ -632,16 +632,15 @@ if not df_ks_raw.empty:
         if val in ['Online', 'Offline', 'Hybrid']: return val
         return 'Offline'
     df_ks_raw['metode_belajar'] = df_ks_raw['metode_belajar'].apply(map_metode)
-    df_ks_raw['status_aktif'] = df_ks_raw['lulus'].apply(lambda x: 0 if pd.notna(x) and float(x) == 1.0 else 1).astype('Int64')
     df_ks_raw['status_lulus'] = df_ks_raw['lulus'].apply(lambda x: 1 if pd.notna(x) and float(x) == 1.0 else 0).astype('Int64')
     df_ks_raw['catatan'] = None
     
     df_ks_raw = df_ks_raw.reset_index()
     df_ks_raw['id_kursus_siswa'] = df_ks_raw['index'] + 1
     
-    transformed_dfs['kursus_siswa'] = df_ks_raw[['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan']]
+    transformed_dfs['kursus_siswa'] = df_ks_raw[['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_lulus', 'catatan']]
 else:
-    transformed_dfs['kursus_siswa'] = pd.DataFrame(columns=['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan'])
+    transformed_dfs['kursus_siswa'] = pd.DataFrame(columns=['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_lulus', 'catatan'])
 
 # Build a map from student to course for matching exit courses
 student_to_course_map = {}
@@ -739,9 +738,12 @@ if 'mitra_note' in raw_data:
         'kemitraan_mulai': 'kemitraan_mulai', 'kemitraan_berakhir': 'kemitraan_berakhir', 'created_at': 'created_at'
     }
     if not df.empty:
-        df['id_mitra_clean'] = df['idmitra'].apply(extract_int).astype('Int64')
+        # FK join: map idmitra -> db_new mitra.id_mitra via kode_mitra
+        cursor_new.execute("SELECT id_mitra, kode_mitra FROM mitra")
+        _mitra_rows = cursor_new.fetchall()
+        _mitra_map = {row['kode_mitra']: int(row['id_mitra']) for row in _mitra_rows}
+        df['id_mitra'] = df['idmitra'].apply(extract_chars).map(_mitra_map).astype('Int64')
         df['id_progres_mitra'] = df['idmnote'].apply(extract_int).astype('Int64')
-        df['id_mitra'] = df['id_mitra_clean']
         df['catatan_progres_mitra'] = df['note']
         df['id_user'] = df['idusers']
         

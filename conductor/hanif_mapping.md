@@ -161,11 +161,11 @@ Fase 5:
 | siswa | no_induk | siswa | nomor_induk | |
 | siswa | email | siswa | email | |
 | siswa | idcalon | siswa | id_calon | |
-| siswa | provinsi | siswa | id_provinsi | |
-| siswa | kabupaten | siswa | id_kabupaten | |
-| siswa | kecamatan | siswa | id_kecamatan | |
-| siswa | kelurahan | siswa | id_kelurahan | |
-| siswa | idmitra | siswa | id_mitra | ambil nilai int nya di db_old |
+| siswa | provinsi | siswa | id_provinsi | nama → id FK lookup ke db_new (Int64) |
+| siswa | kabupaten | siswa | id_kabupaten | nama → id FK lookup ke db_new (Int64) |
+| siswa | kecamatan | siswa | id_kecamatan | nama → id FK lookup ke db_new (Int64) |
+| siswa | kelurahan | siswa | id_kelurahan | nama → id FK lookup ke db_new (Int64) |
+| siswa | idmitra | siswa | id_mitra | extract_int(idmitra) → Int64 |
 | siswa | nisn | siswa | nisn | |
 | siswa | nik | siswa | nik | |
 | siswa | kewarganegaraan | siswa | kewarganegaraan | |
@@ -173,7 +173,7 @@ Fase 5:
 | siswa | rt | siswa | rt | |
 | siswa | rw | siswa | rw | |
 | siswa | kodepos | siswa | kode_pos | |
-| siswa | keluar | siswa | status_aktif | |
+| siswa | statussiswa | siswa | status_pendaftaran | dari kolom statussiswa (varchar) db_old |
 | siswa | rekomen | siswa | rekomendasi | |
 | siswa | info | siswa | sumber_info | |
 | siswa | pembayaran | siswa | metode_pembayaran | |
@@ -194,24 +194,24 @@ Fase 5:
 | siswa | waadmin | siswa | wa_administrasi | |
 | siswa | sts_pengisian | siswa | status_pengisian | enum('Belum Lengkap','Sudah Lengkap') |
 | siswa | bukti | siswa | path_bukti_bayar | |
-| siswa | lulus | siswa | status_lulus_siswa | |
+| siswa | lulus | kursus_siswa | status_lulus | dipindah ke kursus_siswa (kolom status_lulus_siswa di siswa dihapus) |
 | siswa | created_bukti | siswa | tanggal_upload_bukti | |
 | | | siswa | deleted_at | kolom baru |
 | | | | | |
-| | | kursus_siswa | id_kursus_siswa | tabel baru |
-| | | kursus_siswa | id_siswa | tabel baru |
-| | | kursus_siswa | id_kursus | tabel baru |
-| | | kursus_siswa | tanggal_mulai | tabel baru |
-| | | kursus_siswa | metode_belajar | tabel baru |
-| | | kursus_siswa | status_aktif | tabel baru |
-| | | kursus_siswa | catatan | tabel baru |
+| jadwal_siswa + jadwal | idsiswa | kursus_siswa | id_kursus_siswa | auto-increment, tabel baru dari join jadwal_siswa |
+| jadwal_siswa | idsiswa | kursus_siswa | id_siswa | extract_int(idsiswa) → Int64 |
+| jadwal + jadwal_siswa | idjadwal | kursus_siswa | id_kursus | via idpendkursus dari join |
+| jadwal_siswa | tgl_mulai | kursus_siswa | tanggal_mulai | parsed ke date |
+| jadwal | mode_belajar | kursus_siswa | metode_belajar | normalize → Online/Offline/Hybrid |
+| siswa | lulus | kursus_siswa | status_lulus | lulus==1 → 1, else 0 |
+| | | kursus_siswa | catatan | default NULL |
 | | | | | |
-| siswa_keluar | idsiswa_keluar | siswa_keluar | id_keluar | |
-| siswa_keluar | idsiswa | siswa_keluar | id_siswa | |
-| | | siswa_keluar | id_kursus | kolom baru |
+| siswa_keluar | idsiswa_keluar | siswa_keluar | id_keluar | extract_int |
+| siswa_keluar | idsiswa | siswa_keluar | id_siswa | extract_int |
+| kursus_siswa | (via id_siswa) | siswa_keluar | id_kursus | lookup kursus_siswa.id_siswa → id_kursus |
 | siswa_keluar | alasan | siswa_keluar | alasan_keluar | |
 | siswa_keluar | tanggal | siswa_keluar | tanggal_keluar | |
-| | | siswa_keluar | id_tag_keluar | cek kolom alasan_keluar & keterangan_keluar |
+| siswa_keluar | alasan_keluar | siswa_keluar | id_tag_keluar | detect_tag() heuristic: 9 kategori keyword (lulus/jadwal/biaya/lokasi/motivasi/akademik/guru/teknologi/keluarga) + DB lookup siswa_keluar_tag |
 | | | | | |
 | mitra | idmitra | mitra | id_mitra | ambil nilai int nya di db_old |
 | mitra | | mitra | kode_mitra | ambil karakter selain int di db_old kolom idmitra |
@@ -385,11 +385,11 @@ Semua kendala mapping operasional yang sebelumnya terhambat kini telah diselesai
 
 2. **Fase 4 (Tabel Kursus_Siswa & Siswa Keluar)**:
    * **Tabel Kursus_Siswa**: Dibangun secara dinamis dengan men-join tabel `jadwal_siswa` dan `jadwal` di `db_old` guna memetakan relasi siswa B2C secara tepat ke kursus yang mereka ambil.
-     * Kolom `status_aktif` dipetakan dinamis: jika `is_keluar > 0` maka `0` (Tidak Aktif), selain itu `1` (Aktif).
-     * Kolom `status_lulus` dipetakan dari `is_lulus` (jika `is_lulus > 0` maka `1`, selain itu `0`).
+     * Kolom `status_lulus` dipetakan dari kolom `lulus` di `db_old.siswa` (lulus==1 → 1, selain itu 0).
+     * Kolom `status_aktif` **dihapus** dari tabel `kursus_siswa` (tidak ada di skema terbaru).
      * Kolom `catatan` diisi default `NULL`/`None` sesuai arahan.
    * **Tabel Siswa Keluar**: Kolom `id_kursus` yang sebelumnya kosong kini telah berhasil dipetakan secara dinamis berdasarkan pencocokan `id_siswa` dengan mapping hasil tabel `kursus_siswa` di atas.
-   * **Tabel siswa_keluar_tag**: Relasi `id_tag_keluar` berhasil diselesaikan dengan query table perantara `siswa_keluar_tag` lama dan mengonversi format tag string `'T0000x'` menjadi integer murni `x`.
+   * **Tabel siswa_keluar — id_tag_keluar**: Dipetakan menggunakan fungsi `detect_tag()` dengan 9 kategori heuristic berdasarkan keyword di kolom `alasan_keluar` (lulus, jadwal/waktu, biaya, lokasi, motivasi, akademik, guru, teknologi, keluarga/kesehatan). Fallback ke DB lookup `siswa_keluar_tag`.
 
 3. **Fase 5 (Rapor Siswa, Rapor Siswa File & Rapor Lacak)**:
    * Masalah nilai `id_rapor_siswa` yang NULL di tabel `rapor_siswa_file` dan `id_rapor_siswa_file` yang NULL di `rapor_lacak` telah diperbaiki secara tuntas.
