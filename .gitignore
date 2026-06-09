@@ -50,3 +50,7 @@ htmlcov/
 
 # Logs
 *.log
+
+# CSV files
+*_import.csv
+*_export.csv
