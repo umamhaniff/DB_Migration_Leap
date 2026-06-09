@@ -64,31 +64,262 @@ def patch_fase_3():
     with open(path, "r", encoding="utf-8") as f:
         nb = json.load(f)
 
-    new_transformations = """# 3. pelamar -> pelamar
-if 'pelamar' in raw_data:
-    df = pd.DataFrame(raw_data['pelamar'])
-    df['tempat_lahir'] = df['ttl'].apply(extract_place)
-    df['tanggal_lahir'] = df['ttl'].apply(extract_date).apply(parse_date)
+    new_helpers = """# --- HELPER FUNCTIONS ---
+def extract_int(s):
+    if pd.isna(s) or not str(s).strip(): return None
+    nums = re.findall(r'\\\\d+', str(s))
+    return int(nums[0]) if nums else None
+
+def extract_place(ttl):
+    if pd.isna(ttl) or not str(ttl).strip(): return None
+    s = str(ttl).strip()
+    if ',' in s:
+        return s.split(',')[0].strip()
+    match = re.search(r'^[^0-9]+', s)
+    return match.group(0).strip() if match else s
+
+def extract_date(ttl):
+    if pd.isna(ttl) or not str(ttl).strip(): return None
+    s = str(ttl).strip()
+    if ',' in s:
+        parts = s.split(',')
+        if len(parts) > 1: return parts[1].strip()
+    match = re.search(r'(\\\\d.*)', s)
+    return match.group(1).strip() if match else None
+
+def parse_date(date_str):
+    if pd.isna(date_str): return None
+    s = str(date_str).strip()
+    if s in ('', '-', '0', 'nan', 'NaN'): return None
     
-    # enum & data cleaning
+    # First normalize day-of-month ranges: "27 - 29 Mei 2023" -> "27 Mei 2023"
+    s = re.sub(r'\\\\b(\\\\d{1,2})\\\\s*-\\\\s*\\\\d{1,2}\\\\b', r'\\\\1', s)
+    
+    # Try to see if it's a month-level range: e.g. "29 September - 6 Oktober 2021"
+    parts = re.split(r'\\\\s+-\\\\s+|\\\\s+(?:sd|s/d|dan|s\\\\.d\\\\.)\\\\s+', s, flags=re.IGNORECASE)
+    if len(parts) > 1:
+        part1 = parts[0].strip()
+        part2 = parts[1].strip()
+        if not re.search(r'\\\\b\\\\d{4}\\\\b', part1):
+            year_match = re.search(r'\\\\b\\\\d{4}\\\\b', part2)
+            if year_match:
+                part1 = part1 + " " + year_match.group(0)
+        s = part1
+        
+    months_id_to_en = {
+        'januari': 'January', 'februari': 'February', 'maret': 'March', 'april': 'April',
+        'mei': 'May', 'juni': 'June', 'juli': 'July', 'agustus': 'August',
+        'september': 'September', 'oktober': 'October', 'november': 'November', 'desember': 'December',
+        'jan': 'January', 'feb': 'February', 'mar': 'March', 'apr': 'April', 'jun': 'June',
+        'jul': 'July', 'agu': 'August', 'agst': 'August', 'sep': 'September', 'okt': 'October', 'nov': 'November', 'des': 'December'
+    }
+    
+    s = s.replace('-', ' ').replace('/', ' ').replace('.', '').strip()
+    s = re.sub(r'\\\\s+', ' ', s)
+    
+    for id_m, en_m in months_id_to_en.items():
+        s = re.sub(rf'\\\\b{id_m}\\\\b', en_m, s, flags=re.IGNORECASE)
+        
+    year_match = re.search(r'\\\\b\\\\d{4}\\\\b', s)
+    if not year_match:
+        s = s + " 2023"
+        
+    formats = [
+        '%d %B %Y', '%d %b %Y', '%B %Y', '%b %Y',
+        '%d %m %Y', '%m %d %Y', '%Y %m %d',
+        '%d %m %y', '%m %d %y', '%y %m %d'
+    ]
+    for fmt in formats:
+        try:
+            return pd.to_datetime(s, format=fmt).date()
+        except:
+            continue
+            
+    try:
+        res = pd.to_datetime(s, errors='coerce')
+        if pd.notna(res):
+            return res.date()
+    except:
+        pass
+        
+    return None
+
+def extract_latest_year(tahun_str):
+    if pd.isna(tahun_str) or not str(tahun_str).strip(): return None
+    years = re.findall(r'\\\\d{4}', str(tahun_str))
+    if years:
+        return max(map(int, years))
+    return None
+
+def clean_currency(val):
+    if pd.isna(val): return 0
+    s = str(val).strip()
+    nums = re.sub(r'[^0-9]', '', s)
+    return int(nums) if nums else 0
+
+def clean_ipk(val):
+    if pd.isna(val): return 0.0
+    s = str(val).strip().replace(',', '.')
+    match = re.search(r'\\\\d+\\\\.?\\\\d*', s)
+    if match:
+        try: return float(match.group(0))
+        except: return 0.0
+    return 0.0
+
+def clean_name_without_titles(s):
+    if pd.isna(s): return ""
+    s = str(s).strip().lower()
+    if ',' in s: 
+        s = s.split(',')[0]
+    titles = [
+        r'\\\\bs\\\\.?\\\\s*pd\\\\b', r'\\\\bm\\\\.?\\\\s*pd\\\\b', r'\\\\bs\\\\.?\\\\s*s\\\\b', r'\\\\bs\\\\.?\\\\s*t\\\\b', 
+        r'\\\\bs\\\\.?\\\\s*hum\\\\b', r'\\\\bs\\\\.?\\\\s*kom\\\\b', r'\\\\ba\\\\.?\\\\s*md\\\\b', r'\\\\bs\\\\.?\\\\s*e\\\\b', 
+        r'\\\\bm\\\\.?\\\\s*m\\\\b', r'\\\\bdr\\\\b', r'\\\\bdra\\\\b', r'\\\\bdrs\\\\b', r'\\\\bprof\\\\b',
+        r'\\\\bpsi\\\\b', r'\\\\bs\\\\.?\\\\s*psi\\\\b'
+    ]
+    for title in titles:
+        s = re.sub(title, '', s, flags=re.IGNORECASE)
+    s = re.sub(r'[^a-z0-9]', '', s)
+    return s"""
+
+    new_transformations = """# --- TRANSFORMATION ---
+
+# 1. pengajuan -> pengajuan_karyawan
+if 'pengajuan' in raw_data:
+    df = pd.DataFrame(raw_data['pengajuan'])
+    df['status'] = df['status'].replace('Sudah Direvisi', 'Sudah Revisi')
+    df['id_pengajuan'] = df['idpengajuan'].astype('Int64')
+    df['id_user'] = df['idusers']
+    mapping = {
+        'id_pengajuan': 'id_pengajuan', 'id_user': 'id_user', 'keterangan': 'posisi',
+        'jumlah': 'jumlah', 'syarat': 'syarat', 'pertanyaan': 'pertanyaan',
+        'alur': 'alur_seleksi', 'test': 'daftar_tes', 'status': 'status',
+        'created_at': 'created_at'
+    }
+    transformed_dfs['pengajuan_karyawan'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
+
+# 2. histori_pengajuan -> histori_pengajuan
+if 'histori_pengajuan' in raw_data:
+    df = pd.DataFrame(raw_data['histori_pengajuan'])
+    df['status'] = df['status'].replace('Sudah Direvisi', 'Sudah Revisi')
+    df['id_verifikasi'] = df['idhistori'].astype('Int64')
+    df['id_pengajuan'] = df['idpengajuan'].astype('Int64')
+    mapping = {
+        'id_verifikasi': 'id_verifikasi', 'id_pengajuan': 'id_pengajuan',
+        'status': 'status_verifikasi_pengajuan', 'catatan': 'catatan',
+        'created_at': 'created_at'
+    }
+    transformed_dfs['histori_pengajuan'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
+
+# 3. pelamar -> pelamar
+if 'pelamar' in raw_data:
+    df_pel = pd.DataFrame(raw_data['pelamar'])
+    df_pel['tempat_lahir'] = df_pel['ttl'].apply(extract_place)
+    df_pel['tanggal_lahir'] = df_pel['ttl'].apply(extract_date).apply(parse_date)
+    
     def map_nikah(x):
         val = str(x).strip().lower()
         if val in ['menikah', 'nikah', 'kawin']: return 'Menikah'
         if val in ['lajang', 'belum', 'single', 'x', 'none', 'nan', '', '0']: return 'Belum Menikah'
         return 'Belum Menikah'
     
-    df['status_pernikahan'] = df['statusnikah'].apply(map_nikah)
-    df['penggunaan_laptop'] = df['gunalaptop'].apply(lambda x: 'Pernah' if str(x).strip().lower() in ['pernah', 'ya, pernah', 'ya'] else 'Tidak Pernah')
-    df['gaji'] = df['gaji'].apply(clean_currency)
+    df_pel['status_pernikahan'] = df_pel['statusnikah'].apply(map_nikah)
+    df_pel['penggunaan_laptop'] = df_pel['gunalaptop'].apply(lambda x: 'Pernah' if str(x).strip().lower() in ['pernah', 'ya, pernah', 'ya'] else 'Tidak Pernah')
+    df_pel['gaji'] = df_pel['gaji'].apply(clean_currency)
     
-    # Generate integer ID auto-increment mapping
-    df = df.reset_index()
-    df['id_pelamar_new'] = df['index'] + 1
-    pelamar_id_map = dict(zip(df['idpelamar'], df['id_pelamar_new']))
-    df['id_pelamar'] = df['id_pelamar_new']
+    cursor_old.execute("SELECT idusers, email, nama FROM users")
+    df_users = pd.DataFrame(cursor_old.fetchall())
+    cursor_old.execute("SELECT idpelamar, idusers FROM pelamar_users")
+    df_pu = pd.DataFrame(cursor_old.fetchall())
     
-    # Cast id_pengajuan to Int64 to prevent decimal formats in CSV
-    df['id_pengajuan'] = df['idpengajuan'].astype('Int64')
+    cursor_old.execute("SELECT DISTINCT idusers FROM pekerjaan")
+    df_pekerjaan_users = pd.DataFrame(cursor_old.fetchall())
+    cursor_old.execute("SELECT DISTINCT idusers FROM pendidikan")
+    df_pendidikan_users = pd.DataFrame(cursor_old.fetchall())
+    cursor_old.execute("SELECT DISTINCT idusers FROM kursus")
+    df_kursus_users = pd.DataFrame(cursor_old.fetchall())
+    
+    child_users = set(df_pekerjaan_users['idusers']).union(
+        set(df_pendidikan_users['idusers'])
+    ).union(
+        set(df_kursus_users['idusers'])
+    )
+    
+    def clean_str(s):
+        if pd.isna(s): return ""
+        return str(s).strip().lower()
+        
+    df_users['email_clean'] = df_users['email'].apply(clean_str)
+    df_users['name_clean'] = df_users['nama'].apply(clean_name_without_titles)
+    
+    df_pel['email_clean'] = df_pel['email'].apply(clean_str)
+    df_pel['name_clean'] = df_pel['nama'].apply(clean_name_without_titles)
+    
+    pu_map = dict(zip(df_pu['idusers'], df_pu['idpelamar']))
+    email_to_pelamar = {}
+    for _, row in df_pel.iterrows():
+        email = row['email_clean']
+        if email and email not in email_to_pelamar:
+            email_to_pelamar[email] = row['idpelamar']
+            
+    name_to_pelamar = {}
+    for _, row in df_pel.iterrows():
+        name = row['name_clean']
+        if name and name not in name_to_pelamar:
+            name_to_pelamar[name] = row['idpelamar']
+            
+    user_to_pelamar_id = {}
+    unmatched_users = []
+    
+    for u_id in child_users:
+        u_rows = df_users[df_users['idusers'] == u_id]
+        if u_rows.empty:
+            unmatched_users.append((u_id, "User not in users table", ""))
+            continue
+        u_row = u_rows.iloc[0]
+        u_email = u_row['email_clean']
+        u_name = u_row['name_clean']
+        
+        p_id = pu_map.get(u_id)
+        if p_id:
+            user_to_pelamar_id[u_id] = p_id
+            continue
+            
+        p_id = email_to_pelamar.get(u_email)
+        if p_id:
+            user_to_pelamar_id[u_id] = p_id
+            continue
+            
+        p_id = name_to_pelamar.get(u_name)
+        if p_id:
+            user_to_pelamar_id[u_id] = p_id
+            continue
+            
+        unmatched_users.append((u_id, u_row['nama'], u_row['email']))
+        
+    df_pel_extended = df_pel.copy()
+    for u_id, name, email in unmatched_users:
+        new_row = {
+            'idpelamar': u_id,
+            'nama': name,
+            'email': email,
+            'idpengajuan': None,
+        }
+        df_pel_extended = pd.concat([df_pel_extended, pd.DataFrame([new_row])], ignore_index=True)
+        
+    df_pel_extended['id_pelamar_new'] = df_pel_extended.index + 1
+    pelamar_id_map = dict(zip(df_pel_extended['idpelamar'], df_pel_extended['id_pelamar_new']))
+    
+    final_user_to_pelamar_id = {}
+    for u_id in child_users:
+        old_p_id = user_to_pelamar_id.get(u_id)
+        if old_p_id:
+            final_user_to_pelamar_id[u_id] = pelamar_id_map.get(old_p_id)
+        else:
+            final_user_to_pelamar_id[u_id] = pelamar_id_map.get(u_id)
+            
+    df_pel_extended['id_pelamar'] = df_pel_extended['id_pelamar_new']
+    df_pel_extended['id_pengajuan'] = df_pel_extended['idpengajuan'].astype('Int64')
     
     mapping = {
         'id_pelamar': 'id_pelamar', 'id_pengajuan': 'id_pengajuan', 'email': 'email_pelamar',
@@ -107,63 +338,15 @@ if 'pelamar' in raw_data:
         'hasiliq': 'skor_iq', 'piciq': 'foto_iq', 'picminat': 'foto_minat', 
         'picpribadi': 'foto_kepribadian', 'created_at': 'created_at'
     }
-    transformed_dfs['pelamar'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
-
-# Build mapping from idusers -> id_pelamar using advanced matching (Nama & Email)
-cursor_old.execute("SELECT idusers, email, nama FROM users")
-df_users = pd.DataFrame(cursor_old.fetchall())
-cursor_old.execute("SELECT idpelamar, idusers FROM pelamar_users")
-df_pu = pd.DataFrame(cursor_old.fetchall())
-
-def clean_str(s):
-    if pd.isna(s): return ""
-    return str(s).strip().lower()
-
-def clean_name(s):
-    if pd.isna(s): return ""
-    s = str(s).strip().lower()
-    s = re.sub(r'[^a-z0-9]', '', s)
-    return s
-
-df_users['email_clean'] = df_users['email'].apply(clean_str)
-df_users['name_clean'] = df_users['nama'].apply(clean_name)
-
-df_pel_temp = pd.DataFrame(raw_data['pelamar'])
-df_pel_temp['email_clean'] = df_pel_temp['email'].apply(clean_str)
-df_pel_temp['name_clean'] = df_pel_temp['nama'].apply(clean_name)
-df_pel_temp['id_pelamar_new'] = df_pel_temp.index + 1
-temp_pelamar_id_map = dict(zip(df_pel_temp['idpelamar'], df_pel_temp['id_pelamar_new']))
-
-user_to_pelamar_id = {}
-# 1. Map via pelamar_users
-for _, row in df_pu.iterrows():
-    u_id = row['idusers']
-    p_id = row['idpelamar']
-    if p_id in temp_pelamar_id_map:
-        user_to_pelamar_id[u_id] = temp_pelamar_id_map[p_id]
-
-# 2. Map via Email
-email_to_new_id = dict(zip(df_pel_temp[df_pel_temp['email_clean'] != '']['email_clean'], df_pel_temp[df_pel_temp['email_clean'] != '']['id_pelamar_new']))
-for _, row in df_users.iterrows():
-    u_id = row['idusers']
-    email = row['email_clean']
-    if u_id not in user_to_pelamar_id and email in email_to_new_id:
-        user_to_pelamar_id[u_id] = email_to_new_id[email]
-
-# 3. Map via Name
-name_to_new_id = dict(zip(df_pel_temp[df_pel_temp['name_clean'] != '']['name_clean'], df_pel_temp[df_pel_temp['name_clean'] != '']['id_pelamar_new']))
-for _, row in df_users.iterrows():
-    u_id = row['idusers']
-    name = row['name_clean']
-    if u_id not in user_to_pelamar_id and name in name_to_new_id:
-        user_to_pelamar_id[u_id] = name_to_new_id[name]
+    transformed_dfs['pelamar'] = df_pel_extended.rename(columns=mapping).reindex(columns=list(mapping.values()))
 
 # 4. pekerjaan -> pelamar_kerja
 if 'pekerjaan' in raw_data:
     df = pd.DataFrame(raw_data['pekerjaan'])
-    df['id_pelamar'] = df['idusers'].map(user_to_pelamar_id).astype('Int64')
+    df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
+    df['id_pelamar_kerja'] = df['idpekerjaan'].astype('Int64')
     mapping = {
-        'idpekerjaan': 'id_pelamar_kerja', 'id_pelamar': 'id_pelamar',
+        'id_pelamar_kerja': 'id_pelamar_kerja', 'id_pelamar': 'id_pelamar',
         'namaperusahaan': 'nama_perusahaan', 'periode': 'periode', 'jabatan': 'jabatan',
         'jobdesk': 'deskripsi_kerja'
     }
@@ -174,9 +357,10 @@ if 'pendidikan' in raw_data:
     df = pd.DataFrame(raw_data['pendidikan'])
     df['tahun'] = df['tahun'].apply(extract_latest_year)
     df['ipk'] = df['ipk'].apply(clean_ipk)
-    df['id_pelamar'] = df['idusers'].map(user_to_pelamar_id).astype('Int64')
+    df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
+    df['id_pelamar_sekolah'] = df['idpendidikan'].apply(extract_int).astype('Int64')
     mapping = {
-        'idpendidikan': 'id_pelamar_sekolah', 'id_pelamar': 'id_pelamar',
+        'id_pelamar_sekolah': 'id_pelamar_sekolah', 'id_pelamar': 'id_pelamar',
         'sekolah': 'nama_sekolah', 'jenjang': 'jenjang', 'prodi': 'prodi',
         'tahun': 'tahun_lulus', 'ipk': 'ipk', 'organisasi': 'organisasi'
     }
@@ -186,9 +370,10 @@ if 'pendidikan' in raw_data:
 if 'kursus' in raw_data:
     df = pd.DataFrame(raw_data['kursus'])
     df['tanggal'] = df['tanggal'].apply(parse_date)
-    df['id_pelamar'] = df['idusers'].map(user_to_pelamar_id).astype('Int64')
+    df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
+    df['id_pelamar_kursus'] = df['idkursus'].astype('Int64')
     mapping = {
-        'idkursus': 'id_pelamar_kursus', 'id_pelamar': 'id_pelamar',
+        'id_pelamar_kursus': 'id_pelamar_kursus', 'id_pelamar': 'id_pelamar',
         'nama': 'nama_kursus', 'tanggal': 'tanggal', 'deskripsi': 'deskripsi',
         'lokasi': 'lokasi', 'nosertifikat': 'nomor_sertifikat'
     }
@@ -199,9 +384,11 @@ if 'pelamar_note' in raw_data:
     df = pd.DataFrame(raw_data['pelamar_note'])
     df['status'] = df['status'].replace('baru', 'Baru')
     df['id_pelamar'] = df['idpelamar'].map(pelamar_id_map).astype('Int64')
+    df['id_progres_pelamar'] = df['idnote'].astype('Int64')
+    df['id_user'] = df['idusers']
     mapping = {
-        'idnote': 'id_progres_pelamar', 'id_pelamar': 'id_pelamar',
-        'idusers': 'id_user', 'status': 'status_progres_pelamar',
+        'id_progres_pelamar': 'id_progres_pelamar', 'id_pelamar': 'id_pelamar',
+        'id_user': 'id_user', 'status': 'status_progres_pelamar',
         'note': 'catatan', 'link': 'tautan_file', 'pertanyaan': 'pertanyaan',
         'created_at': 'created_at'
     }
@@ -211,8 +398,10 @@ if 'pelamar_note' in raw_data:
 if 'pelamar_users' in raw_data:
     df = pd.DataFrame(raw_data['pelamar_users'])
     df['id_pelamar'] = df['idpelamar'].map(pelamar_id_map).astype('Int64')
+    df['id_rekrutmen'] = df['idassign'].astype('Int64')
+    df['id_user'] = df['idusers']
     mapping = {
-        'idassign': 'id_rekrutmen', 'id_pelamar': 'id_pelamar', 'idusers': 'id_user'
+        'id_rekrutmen': 'id_rekrutmen', 'id_pelamar': 'id_pelamar', 'id_user': 'id_user'
     }
     transformed_dfs['rekrutmen_pelamar'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
 
@@ -220,22 +409,17 @@ print(f"OK: Transformasi {len(transformed_dfs)} tabel Fase 3 selesai.")"""
 
     patched = False
     for cell in nb["cells"]:
-        if cell["cell_type"] == "code" and "# 3. pelamar -> pelamar" in "".join(cell["source"]):
-            source_lines = cell["source"]
-            target_idx = -1
-            for idx, line in enumerate(source_lines):
-                if "# 3. pelamar -> pelamar" in line:
-                    target_idx = idx
-                    break
-            
-            if target_idx != -1:
-                new_lines = source_lines[:target_idx]
-                for line in new_transformations.split("\n"):
-                    new_lines.append(line + "\n")
-                if new_lines[-1] == "\n": new_lines.pop()
-                cell["source"] = new_lines
-                patched = True
-                break
+        if cell["cell_type"] == "code" and "# --- HELPER FUNCTIONS ---" in "".join(cell["source"]):
+            new_lines = ["transformed_dfs = {}\n\n"]
+            for line in new_helpers.split("\n"):
+                new_lines.append(line + "\n")
+            new_lines.append("\n")
+            for line in new_transformations.split("\n"):
+                new_lines.append(line + "\n")
+            if new_lines[-1] == "\n": new_lines.pop()
+            cell["source"] = new_lines
+            patched = True
+            break
 
     if patched:
         ensure_csv_export_cell(nb)
@@ -284,8 +468,7 @@ if 'siswa' in raw_data:
         if pd.isna(s): return ""
         s = str(s).strip().lower()
         s = re.sub(r'\\b(kabupaten|kab|kota|kecamatan|kec|kelurahan|kel|desa|adm)\\b\\.?', '', s)
-        s = s.replace('\\'', '').replace('`', '').replace('-', ' ')
-        s = re.sub(r'\\s+', ' ', s).strip()
+        s = s.replace('\\'', '').replace('`', '').replace('-', '').replace(' ', '')
         return s
 
     df_old_prov['clean'] = df_old_prov['nama'].apply(clean_wil_name)
@@ -412,19 +595,17 @@ if 'siswa' in raw_data:
     df_final['deleted_at'] = None
     target_cols = [c for c in list(mapping.values()) if c in df_final.columns] + ['pekerjaan_ibu', 'deleted_at']
     transformed_dfs['siswa'] = df_final[target_cols]
-
-# 2. kursus_siswa
-# Build kursus_siswa dynamically from db_old.jadwal_siswa & db_old.jadwal
+# Build kursus_siswa dynamically from db_old.jadwal_siswa, db_old.jadwal, and db_old.siswa
 cursor_old.execute(\"\"\"
     SELECT 
         js.idsiswa,
         j.idpendkursus AS id_kursus,
         js.tgl_mulai AS tanggal_mulai,
         j.mode_belajar AS metode_belajar,
-        js.is_keluar,
-        js.is_lulus
+        s.lulus
     FROM jadwal_siswa js
     JOIN jadwal j ON js.idjadwal = j.idjadwal
+    LEFT JOIN siswa s ON js.idsiswa = s.idsiswa
 \"\"\")
 df_ks_raw = pd.DataFrame(cursor_old.fetchall())
 
@@ -451,8 +632,8 @@ if not df_ks_raw.empty:
         if val in ['Online', 'Offline', 'Hybrid']: return val
         return 'Offline'
     df_ks_raw['metode_belajar'] = df_ks_raw['metode_belajar'].apply(map_metode)
-    df_ks_raw['status_aktif'] = df_ks_raw['is_keluar'].apply(lambda x: 0 if float(x) > 0 else 1).astype('Int64')
-    df_ks_raw['status_lulus'] = df_ks_raw['is_lulus'].apply(lambda x: 1 if float(x) > 0 else 0).astype('Int64')
+    df_ks_raw['status_aktif'] = df_ks_raw['lulus'].apply(lambda x: 0 if pd.notna(x) and float(x) == 1.0 else 1).astype('Int64')
+    df_ks_raw['status_lulus'] = df_ks_raw['lulus'].apply(lambda x: 1 if pd.notna(x) and float(x) == 1.0 else 0).astype('Int64')
     df_ks_raw['catatan'] = None
     
     df_ks_raw = df_ks_raw.reset_index()
@@ -469,7 +650,7 @@ if 'kursus_siswa' in transformed_dfs:
         student_to_course_map[row['id_siswa']] = row['id_kursus']
 
 # Fetch exit tags for exit reason mapping
-cursor_old.execute("SELECT idsiswa_keluar, idsiswa, idtag FROM siswa_keluar_tag")
+cursor_old.execute("SELECT idsiswa_keluar, idtag FROM siswa_keluar_tag")
 df_skt = pd.DataFrame(cursor_old.fetchall())
 if not df_skt.empty:
     df_skt['tag_id_int'] = df_skt['idtag'].apply(extract_int).astype('Int64')
@@ -485,10 +666,38 @@ if 'siswa_keluar' in raw_data:
         'alasan_keluar': 'alasan_keluar', 'tanggal_keluar': 'tanggal_keluar', 'id_tag_keluar': 'id_tag_keluar'
     }
     if not df.empty:
+        # Heuristic combined with DB mapping for exit tag
+        def detect_tag(row):
+            db_tag = tag_map.get(row['idsiswa_keluar'])
+            if pd.notna(db_tag) and db_tag is not None:
+                return db_tag
+            alasan = str(row['alasan']).lower()
+            if not alasan.strip() or alasan in ('-', 'none', 'nan', '0', 'tidak ada alasan', 'tidak memberikan alasan'):
+                return 11
+            if any(w in alasan for w in ['lulus', 'selesai', 'tamat', 'wisuda']):
+                return 9
+            if any(w in alasan for w in ['jadwal', 'bentrok', 'eksperimen', 'kegiatan', 'les', 'ekskul', 'sekolah', 'waktu', 'jam', 'hari', 'pagi', 'siang', 'sore', 'malam', 'tabrakan', 'kelelahan', 'capek', 'lelah', 'padat', 'ekstrakurikuler', 'tugas sekolah']):
+                return 5
+            if any(w in alasan for w in ['biaya', 'keuangan', 'dana', 'ekonomi', 'mahal', 'angsuran', 'bayar', 'uang', 'kerjaan', 'pengeluaran', 'pembayaran']):
+                return 7
+            if any(w in alasan for w in ['domisili', 'pindah', 'luar kota', 'surabaya', 'pulkam', 'mudik', 'jarak', 'jauh', 'alamat', 'kembali ke']):
+                return 3
+            if any(w in alasan for w in ['program', 'bosan', 'jenuh', 'malas', 'bosan les', 'ingin main', 'tidak mau les', 'capek ngerjain tugas', 'males']):
+                return 10
+            if any(w in alasan for w in ['akademik', 'kesulitan', 'level', 'tugas', 'nilai', 'pelajaran', 'kurang', 'sulit', 'cepat', 'lambat', 'mengikuti', 'materi', 'susah']):
+                return 1
+            if any(w in alasan for w in ['guru', 'instruktur', 'pengajar', 'teacher', 'sir', 'miss', 'laoshi', 'cocok', 'metode', 'dosen']):
+                return 4
+            if any(w in alasan for w in ['aplikasi', 'zoom', 'classin', 'leapverse', 'laptop', 'hp', 'leapsurabaya', 'tech', 'error', 'sistem', 'device', 'gadget']):
+                return 2
+            if any(w in alasan for w in ['keluarga', 'ortu', 'orang tua', 'mama', 'papa', 'sakit', 'meninggal', 'jaga', 'anak', 'saudara', 'melahirkan', 'hamil']):
+                return 6
+            return 8
+
         df['id_siswa'] = df['idsiswa'].apply(extract_int).astype('Int64')
         df['id_keluar'] = df['idsiswa_keluar'].apply(extract_int).astype('Int64')
         df['id_kursus'] = df['id_siswa'].map(student_to_course_map)
-        df['id_tag_keluar'] = df['idsiswa_keluar'].map(tag_map).fillna(8).astype('Int64')
+        df['id_tag_keluar'] = df.apply(detect_tag, axis=1).astype('Int64')
         df['tanggal_keluar'] = df['tanggal']
         df['alasan_keluar'] = df['alasan']
         transformed_dfs['siswa_keluar'] = df[list(mapping.values())]
@@ -535,9 +744,30 @@ if 'mitra_note' in raw_data:
         df['id_mitra'] = df['id_mitra_clean']
         df['catatan_progres_mitra'] = df['note']
         df['id_user'] = df['idusers']
-        df['status_progres_mitra'] = df['status']
-        df['kemitraan_mulai'] = df['startdate']
-        df['kemitraan_berakhir'] = df['enddate']
+        
+        # Safe status mapping
+        def map_status_mitra(val):
+            if pd.isna(val): return 'On-going'
+            s = str(val).strip().lower()
+            if s == 'on-going': return 'On-going'
+            if s == 'transfer': return 'Transfer'
+            if s == 'connect': return 'Connect'
+            if s == 'done': return 'Done'
+            if s == 'follow up': return 'On-going'
+            return 'On-going'
+        df['status_progres_mitra'] = df['status'].apply(map_status_mitra)
+        
+        # NOT NULL constraints fallback
+        df['kemitraan_mulai'] = df.apply(
+            lambda r: pd.to_datetime(r['startdate']).date() if pd.notna(r['startdate']) and r['startdate'] is not None
+            else (pd.to_datetime(r['created_at']).date() if pd.notna(r['created_at']) else pd.to_datetime('2023-01-01').date()),
+            axis=1
+        )
+        df['kemitraan_berakhir'] = df.apply(
+            lambda r: pd.to_datetime(r['enddate']).date() if pd.notna(r['enddate']) and r['enddate'] is not None
+            else (pd.to_datetime(r['kemitraan_mulai']) + pd.DateOffset(years=1)).date(),
+            axis=1
+        )
         transformed_dfs['mitra_progres'] = df[list(mapping.values())]
     else:
         transformed_dfs['mitra_progres'] = pd.DataFrame(columns=list(mapping.values()))
@@ -752,7 +982,54 @@ print(f"OK: Transformasi {len(transformed_dfs)} tabel Fase 5 selesai.")"""
     else:
         print("Error: Target cell in Fase 5 notebook not found.")
 
+def patch_fase_3_insert_handler():
+    path = "fase_3/insert_handler.ipynb"
+    if not os.path.exists(path):
+        print(f"File {path} not found.")
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        nb = json.load(f)
+        
+    patched = False
+    for cell in nb["cells"]:
+        if cell["cell_type"] == "code" and "tables_to_insert_ordered" in "".join(cell["source"]):
+            source = "".join(cell["source"])
+            old_order = """    # --- BLOK A: PENDAFTARAN & SDM (Karya Hanif) ---
+    'pelamar',                  # Induk data pelamar kerja/kursus
+    'pelamar_kerja',            # Detail pelamar posisi kerja
+    'pelamar_sekolah',          # Riwayat sekolah pelamar
+    'pelamar_kursus',           # Riwayat kursus pelamar
+    'progres_pelamar',          # Log catatan tahapan seleksi
+    'rekrutmen_pelamar',        # Keputusan akhir rekrutmen pelamar
+    'pengajuan_karyawan',       # Form pengajuan penambahan staff baru
+    'histori_pengajuan',        # Log alur persetujuan pengajuan staff"""
+            
+            new_order = """    # --- BLOK A: PENDAFTARAN & SDM (Karya Hanif) ---
+    'pengajuan_karyawan',       # Form pengajuan penambahan staff baru
+    'histori_pengajuan',        # Log alur persetujuan pengajuan staff
+    'pelamar',                  # Induk data pelamar kerja/kursus
+    'pelamar_kerja',            # Detail pelamar posisi kerja
+    'pelamar_sekolah',          # Riwayat sekolah pelamar
+    'pelamar_kursus',           # Riwayat kursus pelamar
+    'progres_pelamar',          # Log catatan tahapan seleksi
+    'rekrutmen_pelamar',        # Keputusan akhir rekrutmen pelamar"""
+            
+            if old_order in source:
+                source = source.replace(old_order, new_order)
+                cell["source"] = [line + "\n" for line in source.split("\n")]
+                if cell["source"][-1] == "\n": cell["source"].pop()
+                patched = True
+                break
+            
+    if patched:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(nb, f, indent=1)
+        print("OK: Fase 3 insert_handler patched successfully!")
+    else:
+        print("Error: Target cell in Fase 3 insert_handler not found or already patched.")
+
 if __name__ == "__main__":
     patch_fase_3()
+    patch_fase_3_insert_handler()
     patch_fase_4()
     patch_fase_5()

@@ -1,5 +1,7 @@
 # Hanif - Mapping
 
+---
+
 ## List Tabel
 Fase 3:
 - `pelamar`
@@ -13,25 +15,24 @@ Fase 3:
 
 Fase 4:
 - `siswa`
--`kursus_siswa`
--`siswa_keluar`
--`mitra`
--`mitra_progres`
--`kemitraan_verifikator`
--`siswa_mitra`
--`siswa_mitra_keluar`
+- `kursus_siswa`
+- `siswa_keluar`
+- `mitra`
+- `mitra_progres`
+- `kemitraan_verifikator`
+- `siswa_mitra`
+- `siswa_mitra_keluar`
 
 Fase 5:
--`rapor_format`
--`rapor_format_sub`
--`rapor_format_formula`
--`rapor_format_formula_sub`
--`rapor_level_config`
--`rapor_sub_level`
--`rapor_siswa`
--`rapor_siswa_file`
--`rapor_lacak`
-
+- `rapor_format`
+- `rapor_format_sub`
+- `rapor_format_formula`
+- `rapor_format_formula_sub`
+- `rapor_level_config`
+- `rapor_sub_level`
+- `rapor_siswa`
+- `rapor_siswa_file`
+- `rapor_lacak`
 
 ---
 

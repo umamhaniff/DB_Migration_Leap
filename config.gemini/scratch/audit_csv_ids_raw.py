@@ -5,8 +5,8 @@ import sys
 
 sys.stdout.reconfigure(encoding='utf-8')
 
-csv_files = glob.glob("conductor/cek_csv/*.csv")
-print(f"Auditing {len(csv_files)} CSV files in conductor/cek_csv (RAW TEXT MODE)...")
+csv_files = glob.glob("extract/cek_csv/*.csv")
+print(f"Auditing {len(csv_files)} CSV files in extract/cek_csv (RAW TEXT MODE)...")
 
 failures = 0
 for file_path in csv_files:
