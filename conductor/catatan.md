@@ -47,6 +47,6 @@ Jika ada perubahan data di database lama dan Anda ingin memperbarui file Pickle 
      ```
 4. Jalankan script audit untuk memastikan kebersihan format ID:
    ```bash
-   venv\Scripts\python scratch/audit_csv_ids_raw.py
+   venv\Scripts\python config.gemini/scratch/audit_csv_ids_raw.py
    ```
 5. File hasil transformasi Pickle `.pkl` akan ter-update di folder masing-masing fase, dan file CSV pengecekan akan ter-update di `extract/cek_csv/`.

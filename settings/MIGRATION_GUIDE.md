@@ -42,9 +42,10 @@ db_migration_leap/
 │   ├── DATABASE_SCHEMA_MIGRATION.md  # Schema database baru
 │   └── ...
 │
-└── schema/                      # Diagram migrasi fase
-    ├── DB LEAP Migration's Phases.mmd
-    └── DB LEAP Migration's Phases 2.mmd
+├── settings/                    # Folder konfigurasi dan panduan
+│   └── schema/                  # Diagram migrasi fase (.mmd)
+│       ├── DB LEAP Migration's Phases.mmd
+│       └── DB LEAP Migration's Phases 2.mmd
 ```
 
 ---
