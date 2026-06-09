@@ -1030,8 +1030,111 @@ def patch_fase_3_insert_handler():
     else:
         print("Error: Target cell in Fase 3 insert_handler not found or already patched.")
 
+def patch_fase_5_rapor_urutan():
+    """
+    Tambah kolom `urutan` ke transform rapor_format (block #1) dan
+    rapor_format_sub (block #2) di fase_5/script_hanif.ipynb.
+
+    Strategi:
+    - rapor_format  : merge LEFT ke rapor_format_import.csv via kolom `judul_rapor`
+    - rapor_format_sub : merge LEFT ke rapor_format_sub_import.csv via
+      `sub_judul_rapor` + `id_rapor_format` (F00001 -> digit int, matched
+      terhadap id_rapor_format numerik dari old DB)
+
+    Jalankan notebook dari direktori fase_5/ agar path CSV relatif valid.
+    """
+    path = "fase_5/script_hanif.ipynb"
+    nb = json.load(open(path, "r", encoding="utf-8"))
+
+    MATCH_KEY = "# 1. format_rapor -> rapor_format"
+
+    old_block_1 = (
+        "# 1. format_rapor -> rapor_format\n"
+        "if 'format_rapor' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor'])\n"
+        "    mapping = {\n"
+        "        'idformat_rapor': 'id_rapor_format',\n"
+        "        'idpendkursus': 'id_kursus', 'title': 'judul_rapor'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_format'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    new_block_1 = (
+        "# 1. format_rapor -> rapor_format (+ urutan dari import CSV)\n"
+        "if 'format_rapor' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor'])\n"
+        "    mapping = {\n"
+        "        'idformat_rapor': 'id_rapor_format',\n"
+        "        'idpendkursus': 'id_kursus', 'title': 'judul_rapor'\n"
+        "    }\n"
+        "    df_rf = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # Merge kolom urutan dari rapor_format_import.csv (sudah diurutkan manual)\n"
+        "    df_urutan_rf = pd.read_csv('rapor_format_import.csv')[['judul_rapor', 'urutan']]\n"
+        "    df_rf = df_rf.merge(df_urutan_rf, on='judul_rapor', how='left')\n"
+        "    df_rf['urutan'] = df_rf['urutan'].astype('Int64')  # cegah float karena NaN\n"
+        "    transformed_dfs['rapor_format'] = df_rf\n"
+    )
+
+    old_block_2 = (
+        "# 2. format_rapor_detil -> rapor_format_sub\n"
+        "if 'format_rapor_detil' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor_detil'])\n"
+        "    mapping = {\n"
+        "        'idformat_rd': 'id_rapor_format_sub',\n"
+        "        'idformat_rapor': 'id_rapor_format', 'subtitle': 'sub_judul_rapor'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_format_sub'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    new_block_2 = (
+        "# 2. format_rapor_detil -> rapor_format_sub (+ urutan dari import CSV)\n"
+        "if 'format_rapor_detil' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor_detil'])\n"
+        "    mapping = {\n"
+        "        'idformat_rd': 'id_rapor_format_sub',\n"
+        "        'idformat_rapor': 'id_rapor_format', 'subtitle': 'sub_judul_rapor'\n"
+        "    }\n"
+        "    df_rfs = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # Merge kolom urutan dari rapor_format_sub_import.csv (sudah diurutkan manual)\n"
+        "    # id_rapor_format di import CSV: format 'F00001' -> ambil digit -> int untuk join\n"
+        "    df_urutan_rfs = pd.read_csv('rapor_format_sub_import.csv')\n"
+        "    df_urutan_rfs['_rf_key'] = df_urutan_rfs['id_rapor_format'].str.extract(r'(\\d+)', expand=False).astype(int)\n"
+        "    df_urutan_rfs = df_urutan_rfs[['_rf_key', 'sub_judul_rapor', 'urutan']]\n"
+        "    df_rfs = df_rfs.copy()\n"
+        "    df_rfs['_rf_key'] = pd.to_numeric(df_rfs['id_rapor_format'], errors='coerce').astype('Int64')\n"
+        "    df_urutan_rfs['_rf_key'] = df_urutan_rfs['_rf_key'].astype('Int64')\n"
+        "    df_rfs = df_rfs.merge(df_urutan_rfs, on=['_rf_key', 'sub_judul_rapor'], how='left').drop(columns=['_rf_key'])\n"
+        "    df_rfs['urutan'] = df_rfs['urutan'].astype('Int64')  # cegah float karena NaN\n"
+        "    transformed_dfs['rapor_format_sub'] = df_rfs\n"
+    )
+
+    patched = False
+    for cell in nb["cells"]:
+        if cell["cell_type"] == "code" and MATCH_KEY in "".join(cell["source"]):
+            source = "".join(cell["source"])
+            if old_block_1 in source:
+                source = source.replace(old_block_1, new_block_1)
+            if old_block_2 in source:
+                source = source.replace(old_block_2, new_block_2)
+            cell["source"] = [line + "\n" for line in source.split("\n")]
+            if cell["source"] and cell["source"][-1] == "\n":
+                cell["source"].pop()
+            patched = True
+            break
+
+    if patched:
+        ensure_csv_export_cell(nb)
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(nb, f, indent=1)
+        print("OK: patch_fase_5_rapor_urutan - rapor_format & rapor_format_sub updated with urutan column.")
+    else:
+        print("Error: target cell not found in patch_fase_5_rapor_urutan. Sudah di-patch sebelumnya atau cell marker berubah.")
+        print("  Hint: cari sel dengan marker:", repr(MATCH_KEY))
+
+
 if __name__ == "__main__":
     patch_fase_3()
     patch_fase_3_insert_handler()
     patch_fase_4()
     patch_fase_5()
+    patch_fase_5_rapor_urutan()

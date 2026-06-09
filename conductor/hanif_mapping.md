@@ -286,10 +286,12 @@ Fase 5:
 | format_rapor | idformat_rapor | rapor_format | id_rapor_format | |
 | format_rapor | idpendkursus | rapor_format | id_kursus | |
 | format_rapor | title | rapor_format | judul_rapor | |
+| | | rapor_format | urutan | dari rapor_format_import.csv (left join on judul_rapor, cast Int64) |
 | | | | | |
 | format_rapor_detil | idformat_rd | rapor_format_sub | id_rapor_format_sub | |
 | format_rapor_detil | idformat_rapor | rapor_format_sub | id_rapor_format | |
 | format_rapor_detil | subtitle | rapor_format_sub | sub_judul_rapor | |
+| | | rapor_format_sub | urutan | dari rapor_format_sub_import.csv (left join on id_rapor_format + sub_judul_rapor, cast Int64) |
 | | | | | |
 | format_rapor_rumus | idfrr | rapor_format_formula | id_rapor_format_formula | |
 | format_rapor_rumus | idformat_rapor | rapor_format_formula | id_rapor_format | |
@@ -358,16 +360,9 @@ TABEL: RAPOR_SISWA_FILE
 - all row in column id_rapor_siswa was null
 (note: sepertinya Baris kosong padahal di db_old ada isi nya ini karna code nya ga berhasil atau ada yang salah)
 
-Masih Menunggu Konfirmasi action dari PM - Next, Skip dlu:
-
-TABEL: RAPOR_FORMAT
-- add column urutan
-
-TABEL: RAPOR_FORMAT_SUB
-- add column urutan
-
-TABEL: RAPOR_FORMAT_FORMULA_SUB
-- add column urutan
+Terselesaikan:
+- Kolom `urutan` di `rapor_format` & `rapor_format_sub` berhasil ditambahkan menggunakan import CSV manual dan di-merge dengan mapping tipe data Int64 agar integer.
+- `rapor_format_formula_sub` tidak memerlukan kolom `urutan` (tidak ada di skema target db_new).
 
 ---
 

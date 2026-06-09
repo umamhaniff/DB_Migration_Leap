@@ -14,6 +14,7 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
 2. **Aturan Penting Project (Project Constraints)**:
    * 🛑 **DILARANG MENGUBAH DATA MASTER/WILAYAH DI DB_NEW**: Tabel referensi wilayah (`provinsi`, `kabupaten`, `kecamatan`, `kelurahan`) di `db_new` sudah bersifat final (hasil migrasi Fase 1 & 2). 
    * 🔄 **Hanya Mengubah Foreign Key (FK)**: Selama transformasi data operasional (seperti `siswa` dan `mitra` di Fase 4), kita hanya diperbolehkan mengubah nilai kolom FK (`id_provinsi`, `id_kabupaten`, `etc.`) agar menunjuk ke ID integer auto-increment baru di `db_new`. Pemetaan ini dicapai dengan mencocokkan nama wilayah secara hierarkis (*Clean-Name Hierarchical Matching*).
+   * 🚫 **DILARANG KERAS MENGUBAH `insert_handler.ipynb`** (di semua fase): File ini bukan bagian Hanif — dikelola oleh anggota tim lain. Jangan pernah edit, patch, atau regenerate file `insert_handler.ipynb` manapun, termasuk melalui `apply_migration_updates.py` atau script patching lain.
 
 ---
 
