@@ -1,6 +1,43 @@
 # Hanif - Mapping
 
-## Fase 3
+## List Tabel
+Fase 3:
+- `pelamar`
+- `pelamar_kerja`
+- `pelamar_sekolah`
+- `pelamar_kursus`
+- `rekrutmen_pelamar`
+- `progres_pelamar`
+- `pengajuan_karyawan`
+- `histori_pengajuan`
+
+Fase 4:
+- `siswa`
+-`kursus_siswa`
+-`siswa_keluar`
+-`mitra`
+-`mitra_progres`
+-`kemitraan_verifikator`
+-`siswa_mitra`
+-`siswa_mitra_keluar`
+
+Fase 5:
+-`rapor_format`
+-`rapor_format_sub`
+-`rapor_format_formula`
+-`rapor_format_formula_sub`
+-`rapor_level_config`
+-`rapor_sub_level`
+-`rapor_siswa`
+-`rapor_siswa_file`
+-`rapor_lacak`
+
+
+---
+
+## Mapping Tabel
+
+### Fase 3
 
 | Tabel Lama | Kolom Lama | Tabel Baru | Kolom Baru | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
@@ -104,7 +141,7 @@
 
 ---
 
-## Fase 4
+### Fase 4
 
 | Tabel Lama | Kolom Lama | Tabel Baru | Kolom Baru | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
@@ -241,7 +278,7 @@
 
 ---
 
-## Fase 5
+### Fase 5
 
 | Tabel Lama | Kolom Lama | Tabel Baru | Kolom Baru | Keterangan |
 | :--- | :--- | :--- | :--- | :--- |
