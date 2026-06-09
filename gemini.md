@@ -22,18 +22,20 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
 
 ---
 
-## 📈 Perkembangan Terakhir (Per 5 Juni 2026)
+## 📈 Perkembangan Terakhir (Per 8 Juni 2026)
 
 1. **Fase 3 (Selesai)**:
    * Mengubah `id_pelamar` di tabel `pelamar` menjadi integer auto-increment.
-   * Memetakan kolom `id_pelamar` di 5 tabel anak (`pelamar_kerja`, `pelamar_sekolah`, `pelamar_kursus`, `progres_pelamar`, `rekrutmen_pelamar`) menjadi tipe data `Int64` yang sinkron dengan ID induk baru.
+   * Memetakan kolom `id_pelamar` di tabel anak (`pelamar_kerja`, `pelamar_sekolah`, `pelamar_kursus`, `progres_pelamar`, `rekrutmen_pelamar`) dari `idusers` lama secara akurat via pencocokan bertingkat (tabel `pelamar_users` -> email -> normalisasi nama lengkap).
 2. **Fase 4 (Selesai)**:
    * Menambahkan kolom `status_pendaftaran` pada tabel `siswa` langsung dari kolom `statussiswa` (varchar) database lama, serta menghapus kolom `status_aktif` dan `status_lulus_siswa` dari mapping.
-   * Mengubah looping mapping kelurahan yang lambat menjadi vectorized `.merge()` (memangkas durasi ETL dari jam-jaman menjadi kurang dari 15 detik).
-   * Melakukan audit kelengkapan kolom pada tabel `mitra`.
+   * Membangun tabel `kursus_siswa` secara dinamis dari join `jadwal_siswa` dan `jadwal` di `db_old` untuk memetakan kelas siswa B2C secara tepat. Kolom `status_aktif` diturunkan dari `is_keluar` (jika `is_keluar > 0` maka `0`, else `1`), `status_lulus` dari `is_lulus`, dan `catatan` diisi default `NULL`.
+   * Memetakan kolom `id_kursus` di `siswa_keluar` secara dinamis dari mapping `kursus_siswa` di atas.
 3. **Fase 5 (Selesai)**:
-   * Menyelesaikan masalah nilai `id_rapor_siswa` yang NULL pada tabel `rapor_siswa_file` dan `id_rapor_siswa_file` yang NULL di `rapor_lacak` dengan pemetaan ID integer lokal di python sebelum ekspor Pickle.
-4. **Validasi & Sinkronisasi**:
-   * Menambahkan test suite [test_migration_pickles.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/test_migration_pickles.py) untuk memastikan file Pickle hasil regenerasi (`fase_3_hanif.pkl`, `fase_4_hanif.pkl`, `fase_5_hanif.pkl`) valid 100%.
-   * Laporan detail audit Fase 5 disimpan di [config.gemini/audit_fase_5.txt](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/audit_fase_5.txt).
-
+   * Menyelesaikan masalah nilai `id_rapor_siswa` yang NULL pada tabel `rapor_siswa_file` dan `id_rapor_siswa_file` yang NULL di `rapor_lacak` dengan penelusuran relasi `(idsiswa, idjadwal)` pada Python DataFrame sebelum ekspor.
+   * Memetakan string `idp_nilai` lama (seperti `'P00745'`) ke new `id_parameter_nilai` secara sekuensial berdasarkan urutan database lama agar sinkron dengan `parameter_nilai` Fase 2.
+   * Mengekstrak integer murni dari format ID string (seperti `'H00001'`) ke `id_rapor_lacak` integer murni.
+4. **Validasi & Sinkronisasi CSV**:
+   * Seluruh CSV verifikasi (25 tabel) diekspor secara bersih ke folder `extract/cek_csv/` tanpa imbuhan `_export`.
+   * Mengintegrasikan auto-cast tipe data integer nullable Pandas (`Int64`) pada cell ekspor CSV untuk membersihkan format desimal `.0` pada seluruh kolom ID/FK dan merender nilai kosong/NaN menjadi string kosong murni.
+   * Laporan detail kendala migrasi yang terselesaikan di-update di `conductor/laporan_kendala_migrasi.md` dan ringkasan catatan di `conductor/catatan.md`.

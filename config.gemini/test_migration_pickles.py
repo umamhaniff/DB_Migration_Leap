@@ -38,6 +38,27 @@ def test_fase_4_pickle():
     assert "status_lulus_siswa" not in df_s.columns
     print("OK: Fase 4 Pickle validation passed successfully!")
 
+def test_fase_5_pickle():
+    path = "fase_5/fase_5_hanif.pkl"
+    if not os.path.exists(path):
+        print(f"Skipping {path} as it does not exist yet.")
+        return
+    data = pd.read_pickle(path)
+    
+    # Check rapor tables
+    tables = ["rapor_siswa", "rapor_siswa_file", "rapor_lacak"]
+    for t in tables:
+        df = data.get(t)
+        assert df is not None, f"{t} table missing in Fase 5 pickle"
+        # Validate ID/FK dtypes
+        id_cols = [c for c in df.columns if c.startswith('id_') or c.endswith('_id') or c == 'id']
+        for col in id_cols:
+            dtype_str = str(df[col].dtype)
+            assert any(x in dtype_str for x in ['int', 'Int64']), f"Column {col} in {t} has non-integer dtype: {dtype_str}"
+            
+    print("OK: Fase 5 Pickle validation passed successfully!")
+
 if __name__ == "__main__":
     test_fase_3_pickle()
     test_fase_4_pickle()
+    test_fase_5_pickle()

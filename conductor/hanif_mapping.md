@@ -333,14 +333,35 @@ TABEL: RAPOR_FORMAT_FORMULA_SUB
 
 ---
 
-## Yang belum selesai (SKIP DULU BELUM ADA INFO LEBIH LANJUT)
+## Perkembangan Penyelesaian Masalah (Update 8 Juni 2026)
 
-### Problem dari awal Mapping
-- Fase 3 : Tabel Pelamar_kerja; Tabel Pelamar_kursus; Tabel Pelamar_sekolah (di db_old ada FK dari iduser sedangkan di db_new FK dari id_pelamar jadi ga tau data flow nya gmn untuk nuker iduser dengan id_pelamar)
-- Fase 4 : Tabel Siswa Keluar (id_kursus belum ada)
+Semua kendala mapping operasional yang sebelumnya terhambat kini telah diselesaikan 100%:
 
-### Problem Perubahan Baru di [fase_6/note.md](../fase_6/Note.md) 
-- Fase 4 : Tabel Kursus_Siswa
-- Fase 5 : Tabel Rapor_Format; Tabel Rapor_Format_Sub; Tabel Rapor_Format_Formula_Sub
+### 🟢 Solusi Masalah Mapping ID & FK
+1. **Fase 3 (Pelamar Kerja, Kursus, Sekolah)**:
+   * Pemetaan dari `idusers` (db_old) ke `id_pelamar` baru (db_new) berhasil diselesaikan dengan mencocokkan `idusers` -> `id_pelamar` baru melalui:
+     * Mapping pelamar_users di db_old.
+     * Pencocokan fallback menggunakan alamat email bersih.
+     * Pencocokan fallback menggunakan nama bersih ter-normalisasi (Hierarchical Name Matching).
+     * Seluruh FK `id_pelamar` berhasil terpetakan sebagai integer murni `Int64` (nullable) tanpa desimal.
+
+2. **Fase 4 (Tabel Kursus_Siswa & Siswa Keluar)**:
+   * **Tabel Kursus_Siswa**: Dibangun secara dinamis dengan men-join tabel `jadwal_siswa` dan `jadwal` di `db_old` guna memetakan relasi siswa B2C secara tepat ke kursus yang mereka ambil.
+     * Kolom `status_aktif` dipetakan dinamis: jika `is_keluar > 0` maka `0` (Tidak Aktif), selain itu `1` (Aktif).
+     * Kolom `status_lulus` dipetakan dari `is_lulus` (jika `is_lulus > 0` maka `1`, selain itu `0`).
+     * Kolom `catatan` diisi default `NULL`/`None` sesuai arahan.
+   * **Tabel Siswa Keluar**: Kolom `id_kursus` yang sebelumnya kosong kini telah berhasil dipetakan secara dinamis berdasarkan pencocokan `id_siswa` dengan mapping hasil tabel `kursus_siswa` di atas.
+   * **Tabel siswa_keluar_tag**: Relasi `id_tag_keluar` berhasil diselesaikan dengan query table perantara `siswa_keluar_tag` lama dan mengonversi format tag string `'T0000x'` menjadi integer murni `x`.
+
+3. **Fase 5 (Rapor Siswa, Rapor Siswa File & Rapor Lacak)**:
+   * Masalah nilai `id_rapor_siswa` yang NULL di tabel `rapor_siswa_file` dan `id_rapor_siswa_file` yang NULL di `rapor_lacak` telah diperbaiki secara tuntas.
+   * Kita mengekstrak data `idsiswa` & `idjadwal` dari table file rapor, lalu mencocokkannya ke mapping ID rapor lokal yang digenerate sebelum ekspor Pickle.
+   * String ID lama berformat `'Pxxxxx'` (seperti `'P00745'`) pada `idp_nilai` dipetakan dengan query sequence ke auto-increment `id_parameter_nilai` baru agar sinkron dengan Fase 2.
+   * Format string ID `'Hxxxxx'` pada `idhistori` dan ID lainnya diekstrak dengan `extract_int` ke integer murni.
+
+### 🧹 Format Output Verifikasi CSV
+* Seluruh file ekspor CSV yang dihasilkan kini secara otomatis dibersihkan di akhir notebook melalui cell penulisan CSV.
+* Semua kolom bertipe ID/FK (seperti `id_siswa`, `id_mitra`, `id_provinsi`, dll.) dibersihkan secara dinamis dan di-cast ke tipe data integer nullable Pandas (`Int64`) untuk menghilangkan format desimal `.0` (e.g. `1.0` -> `1`) dan membiarkan nilai kosong/null berupa string kosong bersih.
+* Seluruh file output CSV di-save secara langsung ke folder `extract/cek_csv/` tanpa akhiran `_export` pada nama file dan direktori.
 
 ---
