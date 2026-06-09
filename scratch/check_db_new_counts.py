@@ -1,28 +1,31 @@
-import mysql.connector
+import sys
 import os
-from dotenv import load_dotenv
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-load_dotenv()
+import mysql.connector
+from config import get_db_config
 
-db_new = mysql.connector.connect(
-    host=os.getenv("DB_HOST", "localhost"),
-    port=int(os.getenv("DB_PORT", 3307)),
-    user=os.getenv("DB_USER", "root"),
-    password=os.getenv("DB_PASSWORD", ""),
-    database="dataleap_v5_migration",
-    charset="utf8mb4",
-    collation="utf8mb4_general_ci"
-)
+cfg = get_db_config()
+conn_new = mysql.connector.connect(**cfg['db_new'])
+cursor = conn_new.cursor()
 
-cursor = db_new.cursor()
-cursor.execute("SHOW TABLES")
-tables = [t[0] for t in cursor.fetchall()]
+tables = [
+    'kontak_prospek', 'calon_siswa', 'calon_siswa_akademik', 'calon_siswa_ortu', 
+    'calon_siswa_bayar', 'calon_siswa_jadwal', 'calon_siswa_kursus', 'calon_siswa_proses', 
+    'calon_siswa_status_logs', 'pengajuan_karyawan', 'histori_pengajuan', 'pelamar', 
+    'pelamar_kerja', 'pelamar_sekolah', 'pelamar_kursus', 'progres_pelamar', 
+    'rekrutmen_pelamar', 'mitra', 'mitra_progres', 'kemitraan_verifikator',
+    'siswa', 'kursus_siswa', 'siswa_keluar', 'siswa_mitra', 'siswa_mitra_keluar'
+]
 
-print("Row counts in dataleap_v5_migration:")
+print("--- Row counts in db_new ---")
 for t in tables:
-    cursor.execute(f"SELECT COUNT(*) FROM {t}")
-    cnt = cursor.fetchone()[0]
-    if cnt > 0:
-        print(f"  - {t}: {cnt} rows")
+    try:
+        cursor.execute(f"SELECT COUNT(*) FROM {t}")
+        cnt = cursor.fetchone()[0]
+        print(f"{t}: {cnt}")
+    except Exception as e:
+        print(f"{t}: Error: {e}")
 
-db_new.close()
+cursor.close()
+conn_new.close()
