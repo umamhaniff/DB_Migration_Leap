@@ -331,70 +331,52 @@ Fase 5:
 
 ---
 
-## Perubahan Baru yang ada di [fase_6/note.md](../fase_6/Note.md) 
+## Catatan Perubahan & Penyelesaian Kendala (Sesuai Kondisi Script Aktual)
 
-### Fase 3
-TABEL: PELAMAR
-cuz this table cant in into the database please update the id_pelamar into auto increment then update the child table too.
-        - pelamar_kerja (id_pelamar)
-        - pelamar_kursus (id_pelamar)
-        - pelamar_sekolah (id_pelamar)
-        - progres_pelamar (id_pelamar)
-        - rekrutmen_pelamar (id_pelamar)
+Semua kendala mapping operasional yang sebelumnya terhambat kini telah diselesaikan 100% pada notebook Jupyter (`script_hanif.ipynb`) di masing-masing fase:
 
-### Fase 4 
-TABEL: SISWA
-- delete column status_aktif, status_lulus_siswa (done)
-- new column status_pendaftaran (mapping baru dengan tujuan kolom statussiswa di Tabel Siswa db_old)
+### 🟢 Fase 3: Pemetaan & Auto-Increment Pelamar
+* **Tabel Pelamar (`id_pelamar`)**: Mengubah tipe kolom `id_pelamar` menjadi integer auto-increment untuk mengatasi kegagalan integrasi database.
+* **Tabel Anak (`pelamar_kerja`, `pelamar_kursus`, `pelamar_sekolah`, `progres_pelamar`, `rekrutmen_pelamar`)**: Kolom `id_pelamar` yang baru berhasil dipetakan secara akurat dari `idusers` lama melalui:
+  1. Relasi tabel `pelamar_users` di database lama.
+  2. Pencocokan fallback berdasarkan email bersih (`email_clean`).
+  3. Pencocokan fallback berdasarkan normalisasi nama lengkap (`clean_name_without_titles`).
+* Seluruh foreign key `id_pelamar` dikonversi ke tipe data integer nullable (`Int64`) untuk memastikan konsistensi relasi tanpa desimal.
 
-TABEL: KURSUS_SISWA
-- new column status_lulus
-(status_lulus_siswa di Tabel Siswa db_new yang dihapus di pindah ke Tabel Kursus_Siswa db_new atau ngambil dari mapping db_old nya langsung dr pada 3 kali ETL nya, tapi ada masalah di id_kursus gatau ngambil dari mna nya karna tabel Kursus_siswa ini tabel baru jadi masih butuh konfirmasi dari PM) - Next, Skip dlu
+### 🟢 Fase 4: Struktur Tabel Siswa, Kursus Siswa, & Mitra
+* **Tabel `siswa`**:
+  * Kolom `status_aktif` dan `status_lulus_siswa` dihapus dari mapping (tidak digunakan lagi di tabel target ini).
+  * Menambahkan kolom `status_pendaftaran` yang diambil langsung dari kolom `statussiswa` (varchar) pada database lama.
+  * Normalisasi data string pada kolom `agama` (misal 'kristen' -> 'Kristen Protestan', 'katolik' -> 'Katolik', dsb.) dan `pekerjaan_ayah` / `pekerjaan_wali` (ke kategori enum standar seperti 'Pegawai Swasta', 'Wiraswasta', dll.).
+* **Tabel `kursus_siswa` (Tabel Baru)**:
+  * Berhasil dibangun secara dinamis dengan melakukan join antara tabel `jadwal_siswa` dan `jadwal` di database lama (`db_old`) untuk mendapatkan relasi B2C yang tepat.
+  * Kolom `status_lulus` dipetakan dari kolom `lulus` di `db_old.siswa` (jika `lulus == 1.0` -> `1`, selain itu `0`).
+  * Kolom `catatan` diisi default `NULL`.
+  * *Catatan Skema*: Kolom `status_aktif` tidak dimasukkan ke dalam mapping script `script_hanif.ipynb` (omitted), meskipun ada di skema database target.
+* **Tabel `siswa_keluar`**:
+  * Kolom `id_kursus` yang sebelumnya kosong kini berhasil diisi secara dinamis dengan mencocokkan `id_siswa` dengan relasi yang terbentuk di tabel `kursus_siswa` di atas.
+  * Kolom `id_tag_keluar` berhasil dipetakan menggunakan fungsi `detect_tag()` yang menyeleksi 9 kategori alasan keluar (lulus, jadwal, biaya, domisili, motivasi, akademik, guru, teknologi, keluarga) berdasarkan kata kunci di kolom `alasan`, dikombinasikan dengan data dari tabel `siswa_keluar_tag` lama.
+* **Tabel `mitra`**:
+  * Kolom bertipe boolean (`leapverse`, `kemitraan`, `elsa`, `classin`, `mitraleap`) dikonversi secara bersih dari format string Ya/Tidak menjadi integer `1`/`0`.
+  * `id_mitra` menyimpan nilai integer dari `idmitra` lama, sementara `kode_mitra` menyimpan prefiks karakternya (misalnya `'M0001'` -> `id_mitra = 1`, `kode_mitra = 'M'`).
+  * Relasi wilayah `provinsi_id` dan `kabupaten_id` dipetakan melalui pencocokan nama wilayah secara hierarkis (*Clean-Name Hierarchical Matching*) ke ID baru.
+* **Tabel `mitra_progres`**:
+  * Menghubungkan progres ke tabel `mitra` dengan mencocokkan `kode_mitra` ke data `id_mitra` hasil migrasi.
+  * Menangani nilai `NULL` pada kolom wajib isi `kemitraan_mulai` dan `kemitraan_berakhir` dengan fallback logis ke tanggal pembuatan data (`created_at`) atau default `2023-01-01`.
 
-TABEL: MITRA
-- ada isinya, kok bisa?? tapi cuma 1 just asking
-(isi nya ga lengkap kek nyaa mungkin karna ETL yang kurang di code nya)
+### 🟢 Fase 5: Sinkronisasi Rapor & Relasi Dokumen
+* **Tabel `rapor_format` & `rapor_format_sub`**:
+  * Kolom `urutan` berhasil ditambahkan dengan melakukan merge data dari file CSV urutan manual (`rapor_format_import.csv` & `rapor_format_sub_import.csv`) menggunakan tipe data `Int64`.
+* **Tabel `rapor_format_formula_sub`**:
+  * Kolom `urutan` tidak ditransformasikan di dalam script `script_hanif.ipynb` (omitted), meskipun ada di skema database target.
+* **Tabel `rapor_siswa_file` & `rapor_lacak`**:
+  * Mengatasi kendala nilai `id_rapor_siswa` dan `id_rapor_siswa_file` yang NULL. Solusinya adalah dengan melakukan pencocokan data `idsiswa` & `idjadwal` dari tabel file ke mapping ID rapor yang digenerate sebelum ekspor data.
+  * Mengonversi string ID lama berformat `'Pxxxxx'` (misal `'P00745'`) di kolom `idp_nilai` ke auto-increment `id_parameter_nilai` baru secara berurutan sesuai urutan di database lama agar sinkron dengan tabel parameter nilai Fase 2.
+  * Mengonversi string ID berformat `'Hxxxxx'` pada `idhistori` ke integer murni menggunakan fungsi `extract_int`.
 
-### Fase 5
-TABEL: RAPOR_SISWA_FILE
-- all row in column id_rapor_siswa was null
-(note: sepertinya Baris kosong padahal di db_old ada isi nya ini karna code nya ga berhasil atau ada yang salah)
-
-Terselesaikan:
-- Kolom `urutan` di `rapor_format` & `rapor_format_sub` berhasil ditambahkan menggunakan import CSV manual dan di-merge dengan mapping tipe data Int64 agar integer.
-- `rapor_format_formula_sub` tidak memerlukan kolom `urutan` (tidak ada di skema target db_new).
-
----
-
-## Perkembangan Penyelesaian Masalah (Update 8 Juni 2026)
-
-Semua kendala mapping operasional yang sebelumnya terhambat kini telah diselesaikan 100%:
-
-### 🟢 Solusi Masalah Mapping ID & FK
-1. **Fase 3 (Pelamar Kerja, Kursus, Sekolah)**:
-   * Pemetaan dari `idusers` (db_old) ke `id_pelamar` baru (db_new) berhasil diselesaikan dengan mencocokkan `idusers` -> `id_pelamar` baru melalui:
-     * Mapping pelamar_users di db_old.
-     * Pencocokan fallback menggunakan alamat email bersih.
-     * Pencocokan fallback menggunakan nama bersih ter-normalisasi (Hierarchical Name Matching).
-     * Seluruh FK `id_pelamar` berhasil terpetakan sebagai integer murni `Int64` (nullable) tanpa desimal.
-
-2. **Fase 4 (Tabel Kursus_Siswa & Siswa Keluar)**:
-   * **Tabel Kursus_Siswa**: Dibangun secara dinamis dengan men-join tabel `jadwal_siswa` dan `jadwal` di `db_old` guna memetakan relasi siswa B2C secara tepat ke kursus yang mereka ambil.
-     * Kolom `status_lulus` dipetakan dari kolom `lulus` di `db_old.siswa` (lulus==1 → 1, selain itu 0).
-     * Kolom `status_aktif` **dihapus** dari tabel `kursus_siswa` (tidak ada di skema terbaru).
-     * Kolom `catatan` diisi default `NULL`/`None` sesuai arahan.
-   * **Tabel Siswa Keluar**: Kolom `id_kursus` yang sebelumnya kosong kini telah berhasil dipetakan secara dinamis berdasarkan pencocokan `id_siswa` dengan mapping hasil tabel `kursus_siswa` di atas.
-   * **Tabel siswa_keluar — id_tag_keluar**: Dipetakan menggunakan fungsi `detect_tag()` dengan 9 kategori heuristic berdasarkan keyword di kolom `alasan_keluar` (lulus, jadwal/waktu, biaya, lokasi, motivasi, akademik, guru, teknologi, keluarga/kesehatan). Fallback ke DB lookup `siswa_keluar_tag`.
-
-3. **Fase 5 (Rapor Siswa, Rapor Siswa File & Rapor Lacak)**:
-   * Masalah nilai `id_rapor_siswa` yang NULL di tabel `rapor_siswa_file` dan `id_rapor_siswa_file` yang NULL di `rapor_lacak` telah diperbaiki secara tuntas.
-   * Kita mengekstrak data `idsiswa` & `idjadwal` dari table file rapor, lalu mencocokkannya ke mapping ID rapor lokal yang digenerate sebelum ekspor Pickle.
-   * String ID lama berformat `'Pxxxxx'` (seperti `'P00745'`) pada `idp_nilai` dipetakan dengan query sequence ke auto-increment `id_parameter_nilai` baru agar sinkron dengan Fase 2.
-   * Format string ID `'Hxxxxx'` pada `idhistori` dan ID lainnya diekstrak dengan `extract_int` ke integer murni.
-
-### 🧹 Format Output Verifikasi CSV
-* Seluruh file ekspor CSV yang dihasilkan kini secara otomatis dibersihkan di akhir notebook melalui cell penulisan CSV.
-* Semua kolom bertipe ID/FK (seperti `id_siswa`, `id_mitra`, `id_provinsi`, dll.) dibersihkan secara dinamis dan di-cast ke tipe data integer nullable Pandas (`Int64`) untuk menghilangkan format desimal `.0` (e.g. `1.0` -> `1`) dan membiarkan nilai kosong/null berupa string kosong bersih.
-* Seluruh file output CSV di-save secara langsung ke folder `extract/cek_csv/` tanpa akhiran `_export` pada nama file dan direktori.
+### 🧹 Format Output Ekspor CSV & Pickle
+* Seluruh file ekspor CSV untuk proses verifikasi (25 tabel) disimpan langsung ke folder `extract/cek_csv/` tanpa imbuhan kata `_export` pada nama file atau direktori.
+* Seluruh kolom ID/FK (seperti `id_siswa`, `id_mitra`, `id_provinsi`, dll.) dibersihkan secara otomatis di akhir notebook dengan melakukan cast ke tipe data Pandas `Int64` untuk menghilangkan desimal `.0` (misal `1.0` -> `1`) dan memastikan nilai kosong ter-render sebagai string kosong murni (`""`) pada file CSV.
+* Seluruh tipe data string Pandas (`string` / `string[python]`) di-cast ke tipe data `object` sebelum proses penyimpanan Pickle untuk memastikan kompatibilitas penuh dengan serializer Python 3.13.
 
 ---
