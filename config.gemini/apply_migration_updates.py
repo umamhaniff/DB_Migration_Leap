@@ -371,6 +371,7 @@ if 'pelamar' in raw_data:
     df_pel_extended['id_pengajuan'] = df_pel_extended['idpengajuan'].astype('Int64')
     
     # ponytail: fill missing NOT NULL columns in pelamar
+    df_pel_extended['email'] = df_pel_extended['email'].fillna('-')
     df_pel_extended['nama'] = df_pel_extended['nama'].fillna('-')
     df_pel_extended['panggilan'] = df_pel_extended['panggilan'].fillna('-')
     df_pel_extended['tempat_lahir'] = df_pel_extended['tempat_lahir'].fillna('-')
@@ -384,10 +385,11 @@ if 'pelamar' in raw_data:
     for int_col in ['toefl', 'hasiliq']:
         df_pel_extended[int_col] = df_pel_extended[int_col].fillna(0)
     df_pel_extended['bergabung'] = df_pel_extended['bergabung'].fillna(pd.to_datetime('1970-01-01').date())
+    df_pel_extended['created_at'] = df_pel_extended['created_at'].fillna(pd.to_datetime('1970-01-01'))
     
     mapping = {
         'id_pelamar': 'id_pelamar', 'id_pengajuan': 'id_pengajuan', 'email': 'email_pelamar',
-        'nama': 'nama_lengkap', 'panggilan': 'nama_panggilan', 'jk': 'jenis_kelamin',
+        'nama': 'nama_lengkap', 'panggilan': 'nama_panggilan', 'jenis_kelamin': 'jenis_kelamin',
         'tempat_lahir': 'tempat_lahir', 'tanggal_lahir': 'tanggal_lahir',
         'alamat': 'alamat_ktp', 'domisili': 'alamat_domisili', 'wa': 'nomor_wa',
         'linkedin': 'akun_linkedin', 'ig': 'akun_instagram', 'fb': 'akun_facebook', 
@@ -1210,7 +1212,6 @@ def patch_fase_5_rapor_urutan():
 
 if __name__ == "__main__":
     patch_fase_3()
-    patch_fase_3_insert_handler()
     patch_fase_4()
     patch_fase_5()
     patch_fase_5_rapor_urutan()
