@@ -631,15 +631,15 @@ if 'siswa' in raw_data:
     df['id_kelurahan'] = df['kelurahan'].map(kel_map).astype('Int64')
     df['id_mitra'] = df['id_mitra_clean'].astype('Int64')
     
-    # Normalize gender (jkel)
+    # ponytail: normalize gender enum, fallback to 'Laki laki' to prevent NOT NULL violation
     def normalize_jkel(val):
-        if pd.isna(val): return None
+        if pd.isna(val): return 'Laki laki'
         s = str(val).strip().lower()
         if s in ['perempuan', 'p']:
             return 'Perempuan'
         if s in ['laki', 'l', 'laki laki', 'laki-laki']:
             return 'Laki laki'
-        return None
+        return 'Laki laki'
     df['jkel'] = df['jkel'].apply(normalize_jkel)
     
     # Clean tgl_daftar using clean_tgl_daftar(row)
@@ -711,7 +711,7 @@ if 'siswa' in raw_data:
         'jenjang_wali': 'pendidikan_wali', 'penghasilan_wali': 'penghasilan_wali',
         'wapeserta': 'wa_siswa', 'wawalmur': 'wa_ortu', 'waadmin': 'wa_administrasi',
         'sts_pengisian': 'status_pengisian', 'bukti': 'path_bukti_bayar',
-        'created_at': 'created_at', 'created_bukti': 'tanggal_upload_bukti'
+        'created_bukti': 'tanggal_upload_bukti'
     }
 
     # Normalisasi Pekerjaan
@@ -778,9 +778,7 @@ if 'siswa' in raw_data:
         else:
             df_final[col] = 'Lainnya'
             
-    df_final['created_at'] = df_final['created_at'].apply(lambda x: pd.to_datetime('1970-01-01').date() if pd.isna(x) or str(x).strip() == '' else pd.to_datetime(str(x)).date())
-    
-    target_cols = list(dict.fromkeys([c for c in list(mapping.values()) if c in df_final.columns] + ['pekerjaan_ibu', 'deleted_at', 'created_at']))
+    target_cols = list(dict.fromkeys([c for c in list(mapping.values()) if c in df_final.columns] + ['pekerjaan_ibu', 'deleted_at']))
     transformed_dfs['siswa'] = df_final[target_cols]
 
 # Build kursus_siswa dynamically from db_old.jadwal_siswa, db_old.jadwal
@@ -890,19 +888,42 @@ if 'siswa_keluar' in raw_data:
         transformed_dfs['siswa_keluar'] = pd.DataFrame(columns=list(mapping.values()))
 
 # 4. mitra -> mitra
-# ponytail: filled missing columns with default values to satisfy NOT NULL constraints
+# ponytail: sequential kode_mitra fix — old extract_chars caused duplicate 'M' unique key violations
 if 'mitra' in raw_data:
     df = pd.DataFrame(raw_data['mitra'])
     df['id_mitra_new'] = df['idmitra'].apply(extract_int).astype('Int64')
-    df['kode_mitra'] = df['idmitra'].apply(extract_chars)
-    
+
+    # ponytail: sort ascending by created_at to make code assignment deterministic
+    df['_sort_key'] = pd.to_datetime(df['created_at'], errors='coerce').fillna(pd.to_datetime('2020-01-01'))
+    df = df.sort_values(by=['_sort_key', 'idmitra']).reset_index(drop=True)
+
+    # ponytail: build unique kode_mitra from student no_induk alpha prefix, sequential if duplicate
+    prefix_count = {}
+    new_kodes = []
+    for _, row in df.iterrows():
+        idmitra = row['idmitra']
+        cursor_old.execute("SELECT no_induk FROM siswa WHERE idmitra = %s AND no_induk IS NOT NULL AND no_induk != ''", (idmitra,))
+        students = cursor_old.fetchall()
+        prefixes = []
+        for s in students:
+            prefix = re.sub(r'[0-9#/ \t-]', '', s['no_induk'])
+            if prefix:
+                prefixes.append(prefix)
+        unique_prefixes = list(set(prefixes))
+        base = unique_prefixes[0] if unique_prefixes else 'M'
+        count = prefix_count.get(base, 0)
+        kode = base if count == 0 else f"{base}{count}"
+        prefix_count[base] = count + 1
+        new_kodes.append(kode)
+    df['kode_mitra'] = new_kodes
+
     df['provinsi_id'] = df['provinsi'].map(prov_map).astype('Int64')
     df['kabupaten_id'] = df['kotkab'].map(kab_map).astype('Int64')
-    
+
     bool_cols = ['leapverse', 'kemitraan', 'elsa', 'classin', 'mitraleap']
     for col in bool_cols:
         df[col] = df[col].apply(convert_ya_tidak)
-        
+
     mapping = {
         'id_mitra_new': 'id_mitra', 'nama': 'nama_mitra', 'instansi': 'nama_instansi',
         'namasekolah': 'nama_sekolah', 'lokasi': 'alamat_mitra', 'kepsek': 'nama_pimpinan',
@@ -915,23 +936,23 @@ if 'mitra' in raw_data:
         'mitraleap': 'is_mitra_leap', 'created_at': 'created_at', 'kode_mitra': 'kode_mitra'
     }
     df_mitra = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
-    
+
     # Fillna all text columns with '-'
     text_cols = ['visi_misi', 'program_mitra', 'info_sdm', 'info_kelemahan', 'rekomendasi_program']
     for col in text_cols:
         df_mitra[col] = df_mitra[col].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
-        
+
     # Fillna all other NOT NULL columns with defaults
     df_mitra['jumlah_siswa_mitra'] = df_mitra['jumlah_siswa_mitra'].fillna(0).astype('Int64')
     df_mitra['bidang_usaha'] = df_mitra['bidang_usaha'].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
     df_mitra['tipe_kerjasama'] = df_mitra['tipe_kerjasama'].apply(lambda x: 'Perluasan Bisnis' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
-    
+
     for col in ['status_kemitraan', 'is_leapverse', 'is_elsa', 'is_classin', 'is_mitra_leap']:
         if col in df_mitra.columns:
             df_mitra[col] = df_mitra[col].fillna(0).astype('Int64')
-            
+
     df_mitra['tahun_bergabung'] = df_mitra['tahun_bergabung'].fillna(2000).astype('Int64')
-    
+
     transformed_dfs['mitra'] = df_mitra
 
 # 5. mitra_note -> mitra_progres
@@ -943,11 +964,17 @@ if 'mitra_note' in raw_data:
         'kemitraan_mulai': 'kemitraan_mulai', 'kemitraan_berakhir': 'kemitraan_berakhir', 'created_at': 'created_at'
     }
     if not df.empty:
-        # FK join: map idmitra -> db_new mitra.id_mitra via kode_mitra
+        # ponytail: use our generated kode map, not extract_chars — bypass old letter-stripping discrepancies
+        old_id_to_kode = dict(zip(df_mitra['id_mitra'].astype(str), transformed_dfs['mitra']['kode_mitra']))
+        # Rebuild: map original idmitra -> new kode_mitra using the df we built above
+        # df still has idmitra column (before rename), but df_mitra is already renamed. Use the raw df from mitra block.
+        # ponytail: re-read from db_new since mitra is already inserted at this point
         cursor_new.execute("SELECT id_mitra, kode_mitra FROM mitra")
         _mitra_rows = cursor_new.fetchall()
         _mitra_map = {row['kode_mitra']: int(row['id_mitra']) for row in _mitra_rows}
-        df['id_mitra'] = df['idmitra'].apply(extract_chars).map(_mitra_map).astype('Int64')
+        # Map: old idmitra -> new kode -> new id_mitra
+        _old_kode_map = dict(zip([str(extract_int(x)) for x in pd.DataFrame(raw_data['mitra'])['idmitra']], transformed_dfs['mitra']['kode_mitra']))
+        df['id_mitra'] = df['idmitra'].apply(lambda x: _mitra_map.get(_old_kode_map.get(str(extract_int(x)), ''), pd.NA)).astype('Int64')
         df['id_progres_mitra'] = df['idmnote'].apply(extract_int).astype('Int64')
         df['catatan_progres_mitra'] = df['note']
         df['id_user'] = df['idusers']
