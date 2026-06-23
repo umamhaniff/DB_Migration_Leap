@@ -65,6 +65,42 @@ def patch_fase_3():
         nb = json.load(f)
 
     new_helpers = """# --- HELPER FUNCTIONS ---
+# ponytail: gender manual lookup table for NULLs
+GENDER_MAP = {
+    'ditari@leapsurabaya.sch.id': 'Perempuan',
+    'safitriintan801@gmail.com': 'Perempuan',
+    'ddoanda@gmail.com': 'Laki laki',
+    'raputri.rap@gmail.com': 'Perempuan',
+    'gistara.azzahra@gmail.com': 'Perempuan',
+    'tedialvianto062@gmail.com': 'Laki laki',
+    'nimasbuwana@gmail.com': 'Perempuan',
+    'erfiadyntahzanin@gmail.com': 'Perempuan',
+    'bryantfrederico@gmail.com': 'Laki laki',
+    'ficcaayu@gmail.com': 'Perempuan',
+    'graciela@leapsurabaya.sch.id': 'Perempuan',
+    '09putrirahayu@gmail.com': 'Perempuan',
+    'shaniafebrianaa@gmail.com': 'Perempuan',
+    'bibah@gmail.com': 'Perempuan',
+    'admin@gmail.com': 'Perempuan',
+    'mochamadsaifulr15@gmail.com': 'Laki laki',
+    'akin@email.com': 'Laki laki',
+    'staffhrd@leapsurabaya.sch.id': 'Laki laki',
+    'rini.rahayu@leapsurabaya.sch.id': 'Perempuan',
+    'cantikaswasti76@gmail.com': 'Perempuan',
+    'hartatik@leapsurabaya.sch.id': 'Perempuan',
+    'nisrina.dea@leapsurabaya.sch.id': 'Perempuan',
+    'miekepuspita@leapsurabaya.sch.id': 'Perempuan',
+    'agung.wijayanto@leapsurabaya.sch.id': 'Laki laki',
+    'qorin.rahmaniah@leapsurabaya.sch.id': 'Perempuan',
+    'miftakhul.jannah@leapsurabaya.sch.id': 'Perempuan',
+    'vivi.wulandari@leapsurabaya.sch.id': 'Perempuan',
+    'eka.wahyuni@leapsurabaya.sch.id': 'Perempuan',
+    'siti.uswatun@leapsurabaya.sch.id': 'Perempuan',
+    'ericasusanto@leapsurabaya.sch.id': 'Perempuan',
+    'getari@leapsurabaya.sch.id': 'Perempuan',
+    'generalaffair@gmail.com': 'Laki laki'
+}
+
 def extract_int(s):
     if pd.isna(s) or not str(s).strip(): return None
     nums = re.findall(r'\\\\d+', str(s))
@@ -220,12 +256,22 @@ if 'pelamar' in raw_data:
     def map_nikah(x):
         val = str(x).strip().lower()
         if val in ['menikah', 'nikah', 'kawin']: return 'Menikah'
-        if val in ['lajang', 'belum', 'single', 'x', 'none', 'nan', '', '0']: return 'Belum Menikah'
         return 'Belum Menikah'
     
     df_pel['status_pernikahan'] = df_pel['statusnikah'].apply(map_nikah)
     df_pel['penggunaan_laptop'] = df_pel['gunalaptop'].apply(lambda x: 'Pernah' if str(x).strip().lower() in ['pernah', 'ya, pernah', 'ya'] else 'Tidak Pernah')
     df_pel['gaji'] = df_pel['gaji'].apply(clean_currency)
+    
+    # ponytail: clean and normalize gender
+    def clean_gender(row):
+        email = str(row.get('email', '')).strip().lower()
+        jk = row.get('jk')
+        if pd.notna(jk) and str(jk).strip():
+            val = str(jk).strip().lower()
+            if 'perempuan' in val or val == 'p': return 'Perempuan'
+            if 'laki' in val or val == 'l': return 'Laki laki'
+        return GENDER_MAP.get(email, 'Laki laki')
+    df_pel['jenis_kelamin'] = df_pel.apply(clean_gender, axis=1)
     
     cursor_old.execute("SELECT idusers, email, nama FROM users")
     df_users = pd.DataFrame(cursor_old.fetchall())
@@ -299,11 +345,14 @@ if 'pelamar' in raw_data:
         
     df_pel_extended = df_pel.copy()
     for u_id, name, email in unmatched_users:
+        # ponytail: fill missing user info
+        cleaned_name = name if pd.notna(name) else '-'
         new_row = {
             'idpelamar': u_id,
-            'nama': name,
+            'nama': cleaned_name,
             'email': email,
             'idpengajuan': None,
+            'jenis_kelamin': GENDER_MAP.get(email, 'Laki laki')
         }
         df_pel_extended = pd.concat([df_pel_extended, pd.DataFrame([new_row])], ignore_index=True)
         
@@ -320,6 +369,21 @@ if 'pelamar' in raw_data:
             
     df_pel_extended['id_pelamar'] = df_pel_extended['id_pelamar_new']
     df_pel_extended['id_pengajuan'] = df_pel_extended['idpengajuan'].astype('Int64')
+    
+    # ponytail: fill missing NOT NULL columns in pelamar
+    df_pel_extended['nama'] = df_pel_extended['nama'].fillna('-')
+    df_pel_extended['panggilan'] = df_pel_extended['panggilan'].fillna('-')
+    df_pel_extended['tempat_lahir'] = df_pel_extended['tempat_lahir'].fillna('-')
+    df_pel_extended['tanggal_lahir'] = df_pel_extended['tanggal_lahir'].fillna(pd.to_datetime('1970-01-01').date())
+    df_pel_extended['status_pernikahan'] = df_pel_extended['status_pernikahan'].fillna('Belum Menikah')
+    df_pel_extended['penggunaan_laptop'] = df_pel_extended['penggunaan_laptop'].fillna('Tidak Pernah')
+    df_pel_extended['gaji'] = df_pel_extended['gaji'].fillna(0)
+    
+    for text_col in ['alamat', 'domisili', 'wa', 'ig', 'fb', 'sosmed', 'laptop', 'internet', 'kegiatan', 'rencana', 'mobilitas', 'info', 'wfo', 'jenis', 'work', 'ppdk', 'pengalaman', 'wawasan', 'sehat', 'ajar', 'app', 'apps', 'link', 'resign', 'piciq', 'picminat', 'picpribadi']:
+        df_pel_extended[text_col] = df_pel_extended[text_col].fillna('-')
+    for int_col in ['toefl', 'hasiliq']:
+        df_pel_extended[int_col] = df_pel_extended[int_col].fillna(0)
+    df_pel_extended['bergabung'] = df_pel_extended['bergabung'].fillna(pd.to_datetime('1970-01-01').date())
     
     mapping = {
         'id_pelamar': 'id_pelamar', 'id_pengajuan': 'id_pengajuan', 'email': 'email_pelamar',
@@ -355,10 +419,14 @@ if 'pekerjaan' in raw_data:
 # 5. pendidikan -> pelamar_sekolah
 if 'pendidikan' in raw_data:
     df = pd.DataFrame(raw_data['pendidikan'])
-    df['tahun'] = df['tahun'].apply(extract_latest_year)
-    df['ipk'] = df['ipk'].apply(clean_ipk)
+    df['tahun'] = df['tahun'].apply(extract_latest_year).fillna(2000).astype(int)
+    df['ipk'] = df['ipk'].apply(clean_ipk).fillna(0.0)
     df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
     df['id_pelamar_sekolah'] = df['idpendidikan'].apply(extract_int).astype('Int64')
+    
+    for col in ['sekolah', 'jenjang', 'prodi', 'organisasi']:
+        df[col] = df[col].fillna('-')
+        
     mapping = {
         'id_pelamar_sekolah': 'id_pelamar_sekolah', 'id_pelamar': 'id_pelamar',
         'sekolah': 'nama_sekolah', 'jenjang': 'jenjang', 'prodi': 'prodi',
@@ -369,9 +437,13 @@ if 'pendidikan' in raw_data:
 # 6. kursus -> pelamar_kursus
 if 'kursus' in raw_data:
     df = pd.DataFrame(raw_data['kursus'])
-    df['tanggal'] = df['tanggal'].apply(parse_date)
+    df['tanggal'] = df['tanggal'].apply(parse_date).fillna(pd.to_datetime('1970-01-01').date())
     df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
     df['id_pelamar_kursus'] = df['idkursus'].astype('Int64')
+    
+    for col in ['nama', 'deskripsi', 'lokasi', 'nosertifikat']:
+        df[col] = df[col].fillna('-')
+        
     mapping = {
         'id_pelamar_kursus': 'id_pelamar_kursus', 'id_pelamar': 'id_pelamar',
         'nama': 'nama_kursus', 'tanggal': 'tanggal', 'deskripsi': 'deskripsi',
@@ -386,6 +458,10 @@ if 'pelamar_note' in raw_data:
     df['id_pelamar'] = df['idpelamar'].map(pelamar_id_map).astype('Int64')
     df['id_progres_pelamar'] = df['idnote'].astype('Int64')
     df['id_user'] = df['idusers']
+    
+    for col in ['note', 'link', 'pertanyaan']:
+        df[col] = df[col].fillna('-')
+        
     mapping = {
         'id_progres_pelamar': 'id_progres_pelamar', 'id_pelamar': 'id_pelamar',
         'id_user': 'id_user', 'status': 'status_progres_pelamar',
