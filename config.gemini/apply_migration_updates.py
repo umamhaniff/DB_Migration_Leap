@@ -483,6 +483,21 @@ if 'pelamar_users' in raw_data:
     }
     transformed_dfs['rekrutmen_pelamar'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
 
+# ponytail: auto-convert datetime and date columns to standard strings to avoid MySQL timestamp conversion errors
+for table_name, df_tbl in list(transformed_dfs.items()):
+    if df_tbl is not None and not df_tbl.empty:
+        for col in df_tbl.columns:
+            if pd.api.types.is_datetime64_any_dtype(df_tbl[col]):
+                df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else None)
+            else:
+                first_val = df_tbl[col].dropna().iloc[0] if not df_tbl[col].dropna().empty else None
+                if first_val is not None and hasattr(first_val, 'strftime'):
+                    import datetime as dt_mod
+                    if isinstance(first_val, dt_mod.datetime) or hasattr(first_val, 'hour'):
+                        df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) and hasattr(x, 'strftime') else (str(x) if pd.notna(x) else None))
+                    else:
+                        df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) and hasattr(x, 'strftime') else (str(x) if pd.notna(x) else None))
+
 print(f"OK: Transformasi {len(transformed_dfs)} tabel Fase 3 selesai.")"""
 
     patched = False
@@ -516,7 +531,20 @@ def patch_fase_4():
         nb = json.load(f)
 
     new_transformations = """# 1. siswa -> siswa
+# ponytail: normalized gender and fixed dates, resolved duplicate nomor_induk and filled missing NOT NULL columns
 if 'siswa' in raw_data:
+    # Define parse_date_f4 at the start of the siswa block
+    def parse_date_f4(date_str):
+        if pd.isna(date_str) or not str(date_str).strip(): return None
+        s = str(date_str).strip()
+        # Common formats
+        formats = ['%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y']
+        for fmt in formats:
+            try: return pd.to_datetime(s, format=fmt).date()
+            except: continue
+        try: return pd.to_datetime(s, errors='coerce').date()
+        except: return None
+
     df = pd.DataFrame(raw_data['siswa'])
     df['id_siswa_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
     df['id_mitra_clean'] = df['idmitra'].apply(extract_int).astype('Int64')
@@ -603,6 +631,57 @@ if 'siswa' in raw_data:
     df['id_kelurahan'] = df['kelurahan'].map(kel_map).astype('Int64')
     df['id_mitra'] = df['id_mitra_clean'].astype('Int64')
     
+    # Normalize gender (jkel)
+    def normalize_jkel(val):
+        if pd.isna(val): return None
+        s = str(val).strip().lower()
+        if s in ['perempuan', 'p']:
+            return 'Perempuan'
+        if s in ['laki', 'l', 'laki laki', 'laki-laki']:
+            return 'Laki laki'
+        return None
+    df['jkel'] = df['jkel'].apply(normalize_jkel)
+    
+    # Clean tgl_daftar using clean_tgl_daftar(row)
+    def clean_tgl_daftar(row):
+        tgl = parse_date_f4(row.get('tgl_daftar'))
+        if pd.notna(tgl) and tgl is not None:
+            return tgl
+        no_induk = str(row.get('no_induk', '')).strip()
+        if len(no_induk) >= 4 and no_induk[0].isdigit():
+            year_part = no_induk[:4]
+            if year_part.isdigit():
+                year_val = int(year_part)
+                if 2000 <= year_val <= 2026:
+                    rest_part = no_induk[4:]
+                    if any(c in '123456789' for c in rest_part):
+                        return pd.to_datetime(f"{year_part}-07-01").date()
+        return pd.to_datetime('1970-01-01').date()
+    df['tgl_daftar'] = df.apply(clean_tgl_daftar, axis=1)
+    
+    # Resolve duplicate no_induk
+    def fix_no_induk(row):
+        val = row.get('no_induk')
+        if pd.isna(val):
+            return f"TEMP-{row['idsiswa']}"
+        s = str(val).strip()
+        if s in ('', '-', '#N/A', 'None', 'nan', 'NULL'):
+            return f"TEMP-{row['idsiswa']}"
+        return s
+    df['no_induk'] = df.apply(fix_no_induk, axis=1)
+    
+    seen_no_induk = {}
+    new_no_induk_list = []
+    for _, row in df.iterrows():
+        val = row['no_induk']
+        if val not in seen_no_induk:
+            seen_no_induk[val] = 0
+            new_no_induk_list.append(val)
+        else:
+            seen_no_induk[val] += 1
+            new_no_induk_list.append(f"{val}-{seen_no_induk[val]}")
+    df['no_induk'] = new_no_induk_list
+
     # Normalisasi Agama
     def normalize_agama(a):
         if pd.isna(a) or str(a).strip() == '': return 'Islam'
@@ -632,7 +711,7 @@ if 'siswa' in raw_data:
         'jenjang_wali': 'pendidikan_wali', 'penghasilan_wali': 'penghasilan_wali',
         'wapeserta': 'wa_siswa', 'wawalmur': 'wa_ortu', 'waadmin': 'wa_administrasi',
         'sts_pengisian': 'status_pengisian', 'bukti': 'path_bukti_bayar',
-        'created_bukti': 'tanggal_upload_bukti'
+        'created_at': 'created_at', 'created_bukti': 'tanggal_upload_bukti'
     }
 
     # Normalisasi Pekerjaan
@@ -671,37 +750,61 @@ if 'siswa' in raw_data:
     df_final = df.rename(columns=mapping)
     df_final['pekerjaan_ibu'] = 'Lainnya'
     df_final['deleted_at'] = None
-    target_cols = [c for c in list(mapping.values()) if c in df_final.columns] + ['pekerjaan_ibu', 'deleted_at']
+    
+    # Ensure created_at is present
+    if 'created_at' not in df_final.columns:
+        df_final['created_at'] = None
+        
+    # Fill empty/NULL target columns with defaults
+    cols_to_dash = [
+        'nama_lengkap', 'nama_panggilan', 'email', 'wa_siswa', 'wa_ortu', 'wa_administrasi',
+        'metode_pembayaran', 'status_pendaftaran', 'rekomendasi', 'sumber_info', 'kewarganegaraan',
+        'nama_ayah', 'nama_ibu', 'nama_wali',
+        'pendidikan_ayah', 'pendidikan_ibu', 'pendidikan_wali',
+        'rt', 'rw', 'kode_pos', 'nisn', 'nik'
+    ]
+    for col in cols_to_dash:
+        if col in df_final.columns:
+            df_final[col] = df_final[col].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+        else:
+            df_final[col] = '-'
+            
+    df_final['agama'] = df_final['agama'].apply(lambda x: 'Islam' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+    
+    cols_to_lainnya = ['pekerjaan_ayah', 'pekerjaan_ibu', 'pekerjaan_wali']
+    for col in cols_to_lainnya:
+        if col in df_final.columns:
+            df_final[col] = df_final[col].apply(lambda x: 'Lainnya' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+        else:
+            df_final[col] = 'Lainnya'
+            
+    df_final['created_at'] = df_final['created_at'].apply(lambda x: pd.to_datetime('1970-01-01').date() if pd.isna(x) or str(x).strip() == '' else pd.to_datetime(str(x)).date())
+    
+    target_cols = list(dict.fromkeys([c for c in list(mapping.values()) if c in df_final.columns] + ['pekerjaan_ibu', 'deleted_at', 'created_at']))
     transformed_dfs['siswa'] = df_final[target_cols]
-# Build kursus_siswa dynamically from db_old.jadwal_siswa, db_old.jadwal, and db_old.siswa
+
+# Build kursus_siswa dynamically from db_old.jadwal_siswa, db_old.jadwal
+# ponytail: query adjusted to select is_keluar and is_lulus; deduplicated on id_siswa and id_kursus
 cursor_old.execute(\"\"\"
     SELECT 
         js.idsiswa,
         j.idpendkursus AS id_kursus,
         js.tgl_mulai AS tanggal_mulai,
         j.mode_belajar AS metode_belajar,
-        s.lulus
+        js.is_keluar,
+        js.is_lulus
     FROM jadwal_siswa js
     JOIN jadwal j ON js.idjadwal = j.idjadwal
-    LEFT JOIN siswa s ON js.idsiswa = s.idsiswa
 \"\"\")
 df_ks_raw = pd.DataFrame(cursor_old.fetchall())
 
 if not df_ks_raw.empty:
     df_ks_raw['id_siswa'] = df_ks_raw['idsiswa'].apply(extract_int).astype('Int64')
+    df_ks_raw['id_kursus'] = df_ks_raw['id_kursus'].apply(extract_int).astype('Int64')
     
-    # Redefine parse_date for Fase 4
-    def parse_date_f4(date_str):
-        if pd.isna(date_str) or not str(date_str).strip(): return None
-        s = str(date_str).strip()
-        # Common formats
-        formats = ['%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y']
-        for fmt in formats:
-            try: return pd.to_datetime(s, format=fmt).date()
-            except: continue
-        try: return pd.to_datetime(s, errors='coerce').date()
-        except: return None
-        
+    # Deduplicate on ['id_siswa', 'id_kursus'] using Pandas .groupby().first()
+    df_ks_raw = df_ks_raw.groupby(['id_siswa', 'id_kursus'], as_index=False).first()
+    
     df_ks_raw['tanggal_mulai'] = df_ks_raw['tanggal_mulai'].apply(parse_date_f4)
     
     def map_metode(x):
@@ -710,15 +813,19 @@ if not df_ks_raw.empty:
         if val in ['Online', 'Offline', 'Hybrid']: return val
         return 'Offline'
     df_ks_raw['metode_belajar'] = df_ks_raw['metode_belajar'].apply(map_metode)
-    df_ks_raw['status_lulus'] = df_ks_raw['lulus'].apply(lambda x: 1 if pd.notna(x) and float(x) == 1.0 else 0).astype('Int64')
+    
+    # Map status_aktif and status_lulus
+    df_ks_raw['status_aktif'] = df_ks_raw['is_keluar'].apply(lambda x: 0 if pd.notna(x) and float(x) > 0 else 1).astype('Int64')
+    df_ks_raw['status_lulus'] = df_ks_raw['is_lulus'].apply(lambda x: 1 if pd.notna(x) and float(x) > 0 else 0).astype('Int64')
     df_ks_raw['catatan'] = None
     
-    df_ks_raw = df_ks_raw.reset_index()
-    df_ks_raw['id_kursus_siswa'] = df_ks_raw['index'] + 1
+    # Reassign id_kursus_siswa sequentially from 1
+    df_ks_raw = df_ks_raw.reset_index(drop=True)
+    df_ks_raw['id_kursus_siswa'] = df_ks_raw.index + 1
     
-    transformed_dfs['kursus_siswa'] = df_ks_raw[['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_lulus', 'catatan']]
+    transformed_dfs['kursus_siswa'] = df_ks_raw[['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan']]
 else:
-    transformed_dfs['kursus_siswa'] = pd.DataFrame(columns=['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_lulus', 'catatan'])
+    transformed_dfs['kursus_siswa'] = pd.DataFrame(columns=['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan'])
 
 # Build a map from student to course for matching exit courses
 student_to_course_map = {}
@@ -736,6 +843,7 @@ else:
     tag_map = {}
 
 # 3. siswa_keluar -> siswa_keluar
+# ponytail: filled empty alasan and parsed date for siswa_keluar
 if 'siswa_keluar' in raw_data:
     df = pd.DataFrame(raw_data['siswa_keluar'])
     mapping = {
@@ -775,13 +883,14 @@ if 'siswa_keluar' in raw_data:
         df['id_keluar'] = df['idsiswa_keluar'].apply(extract_int).astype('Int64')
         df['id_kursus'] = df['id_siswa'].map(student_to_course_map)
         df['id_tag_keluar'] = df.apply(detect_tag, axis=1).astype('Int64')
-        df['tanggal_keluar'] = df['tanggal']
-        df['alasan_keluar'] = df['alasan']
+        df['tanggal_keluar'] = df['tanggal'].apply(lambda x: parse_date_f4(x) or pd.to_datetime('1970-01-01').date())
+        df['alasan_keluar'] = df['alasan'].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
         transformed_dfs['siswa_keluar'] = df[list(mapping.values())]
     else:
         transformed_dfs['siswa_keluar'] = pd.DataFrame(columns=list(mapping.values()))
 
 # 4. mitra -> mitra
+# ponytail: filled missing columns with default values to satisfy NOT NULL constraints
 if 'mitra' in raw_data:
     df = pd.DataFrame(raw_data['mitra'])
     df['id_mitra_new'] = df['idmitra'].apply(extract_int).astype('Int64')
@@ -805,7 +914,25 @@ if 'mitra' in raw_data:
         'jeniskemitraan': 'tipe_kerjasama', 'elsa': 'is_elsa', 'classin': 'is_classin',
         'mitraleap': 'is_mitra_leap', 'created_at': 'created_at', 'kode_mitra': 'kode_mitra'
     }
-    transformed_dfs['mitra'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
+    df_mitra = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
+    
+    # Fillna all text columns with '-'
+    text_cols = ['visi_misi', 'program_mitra', 'info_sdm', 'info_kelemahan', 'rekomendasi_program']
+    for col in text_cols:
+        df_mitra[col] = df_mitra[col].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+        
+    # Fillna all other NOT NULL columns with defaults
+    df_mitra['jumlah_siswa_mitra'] = df_mitra['jumlah_siswa_mitra'].fillna(0).astype('Int64')
+    df_mitra['bidang_usaha'] = df_mitra['bidang_usaha'].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+    df_mitra['tipe_kerjasama'] = df_mitra['tipe_kerjasama'].apply(lambda x: 'Perluasan Bisnis' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+    
+    for col in ['status_kemitraan', 'is_leapverse', 'is_elsa', 'is_classin', 'is_mitra_leap']:
+        if col in df_mitra.columns:
+            df_mitra[col] = df_mitra[col].fillna(0).astype('Int64')
+            
+    df_mitra['tahun_bergabung'] = df_mitra['tahun_bergabung'].fillna(2000).astype('Int64')
+    
+    transformed_dfs['mitra'] = df_mitra
 
 # 5. mitra_note -> mitra_progres
 if 'mitra_note' in raw_data:
@@ -918,6 +1045,21 @@ if 'siswa_keluar_mitra' in raw_data:
         transformed_dfs['siswa_mitra_keluar'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
     else:
         transformed_dfs['siswa_mitra_keluar'] = pd.DataFrame(columns=list(mapping.values()))
+
+# ponytail: auto-convert datetime and date columns to standard strings to avoid MySQL timestamp conversion errors
+for table_name, df_tbl in list(transformed_dfs.items()):
+    if df_tbl is not None and not df_tbl.empty:
+        for col in df_tbl.columns:
+            if pd.api.types.is_datetime64_any_dtype(df_tbl[col]):
+                df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else None)
+            else:
+                first_val = df_tbl[col].dropna().iloc[0] if not df_tbl[col].dropna().empty else None
+                if first_val is not None and hasattr(first_val, 'strftime'):
+                    import datetime as dt_mod
+                    if isinstance(first_val, dt_mod.datetime) or hasattr(first_val, 'hour'):
+                        df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) and hasattr(x, 'strftime') else (str(x) if pd.notna(x) else None))
+                    else:
+                        df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) and hasattr(x, 'strftime') else (str(x) if pd.notna(x) else None))
 
 print(f"✓ Transformasi {len(transformed_dfs)} tabel Fase 4 selesai.")"""
 
@@ -1032,6 +1174,21 @@ if 'history_rapor' in raw_data and 'rapor_siswa_file' in transformed_dfs:
         'id_jadwal_clean': 'id_jadwal', 'tgl': 'tanggal_terkirim', 'status': 'status_pengiriman'
     }
     transformed_dfs['rapor_lacak'] = df_merged.rename(columns=mapping)[list(mapping.values()) + ['id_rapor_siswa_file']]
+
+# ponytail: auto-convert datetime and date columns to standard strings to avoid MySQL timestamp conversion errors
+for table_name, df_tbl in list(transformed_dfs.items()):
+    if df_tbl is not None and not df_tbl.empty:
+        for col in df_tbl.columns:
+            if pd.api.types.is_datetime64_any_dtype(df_tbl[col]):
+                df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) else None)
+            else:
+                first_val = df_tbl[col].dropna().iloc[0] if not df_tbl[col].dropna().empty else None
+                if first_val is not None and hasattr(first_val, 'strftime'):
+                    import datetime as dt_mod
+                    if isinstance(first_val, dt_mod.datetime) or hasattr(first_val, 'hour'):
+                        df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d %H:%M:%S') if pd.notna(x) and hasattr(x, 'strftime') else (str(x) if pd.notna(x) else None))
+                    else:
+                        df_tbl[col] = df_tbl[col].apply(lambda x: x.strftime('%Y-%m-%d') if pd.notna(x) and hasattr(x, 'strftime') else (str(x) if pd.notna(x) else None))
 
 print(f"OK: Transformasi {len(transformed_dfs)} tabel Fase 5 selesai.")"""
 
