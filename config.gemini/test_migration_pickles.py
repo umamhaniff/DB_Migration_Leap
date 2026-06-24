@@ -95,6 +95,12 @@ def test_fase_4_pickle():
     assert "id_keluar" not in df_sk.columns, "id_keluar PK should be removed from siswa_keluar"
     assert "id_siswa" in df_sk.columns, "id_siswa FK missing in siswa_keluar"
 
+    # 8. Check kursus_siswa
+    df_ks = data.get("kursus_siswa")
+    assert df_ks is not None, "kursus_siswa table missing"
+    assert "id_kursus_siswa" not in df_ks.columns, "id_kursus_siswa PK should be removed from kursus_siswa"
+    assert "id_siswa" in df_ks.columns, "id_siswa FK missing in kursus_siswa"
+
     print("OK: Fase 4 Pickle validation passed successfully!")
 
 def test_fase_5_pickle():

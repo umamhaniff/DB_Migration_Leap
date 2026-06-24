@@ -804,7 +804,8 @@ if 'siswa' in raw_data:
         'metode_pembayaran', 'status_pendaftaran', 'rekomendasi', 'sumber_info', 'kewarganegaraan',
         'nama_ayah', 'nama_ibu', 'nama_wali',
         'pendidikan_ayah', 'pendidikan_ibu', 'pendidikan_wali',
-        'rt', 'rw', 'kode_pos', 'nisn', 'nik'
+        'rt', 'rw', 'kode_pos', 'nisn', 'nik',
+        'asal_sekolah', 'tingkat_sekolah', 'nama_orang_tua', 'pekerjaan_orang_tua', 'tempat_lahir', 'path_bukti_bayar'
     ]
     for col in cols_to_dash:
         if col in df_final.columns:
@@ -812,6 +813,12 @@ if 'siswa' in raw_data:
         else:
             df_final[col] = '-'
             
+    # Fill date and timestamp NOT NULL columns with safe defaults
+    if 'tanggal_lahir' in df_final.columns:
+        df_final['tanggal_lahir'] = df_final['tanggal_lahir'].apply(lambda x: pd.to_datetime('1970-01-01').date() if pd.isna(x) or x is None else x)
+    if 'tanggal_upload_bukti' in df_final.columns:
+        df_final['tanggal_upload_bukti'] = df_final['tanggal_upload_bukti'].apply(lambda x: pd.to_datetime('2020-01-01 00:00:00') if pd.isna(x) or x is None else x)
+
     # ponytail: apply custom WA number cleaning and slicing to avoid MySQL truncation errors
     for col in ['wa_siswa', 'wa_ortu', 'wa_administrasi']:
         if col in df_final.columns:
@@ -883,11 +890,11 @@ if not df_ks_raw.empty:
     
     # Reassign id_kursus_siswa sequentially from 1
     df_ks_raw = df_ks_raw.reset_index(drop=True)
-    df_ks_raw['id_kursus_siswa'] = df_ks_raw.index + 1
+    # id_kursus_siswa is auto-increment in db_new, so we exclude it from target columns to let MySQL handle it
     
-    transformed_dfs['kursus_siswa'] = df_ks_raw[['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan']]
+    transformed_dfs['kursus_siswa'] = df_ks_raw[['id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan']]
 else:
-    transformed_dfs['kursus_siswa'] = pd.DataFrame(columns=['id_kursus_siswa', 'id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan'])
+    transformed_dfs['kursus_siswa'] = pd.DataFrame(columns=['id_siswa', 'id_kursus', 'tanggal_mulai', 'metode_belajar', 'status_aktif', 'status_lulus', 'catatan'])
 
 # Build a map from student to course for matching exit courses
 student_to_course_map = {}
@@ -1010,6 +1017,12 @@ if 'mitra' in raw_data:
     df_mitra['jumlah_siswa_mitra'] = df_mitra['jumlah_siswa_mitra'].fillna(0).astype('Int64')
     df_mitra['bidang_usaha'] = df_mitra['bidang_usaha'].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
     df_mitra['tipe_kerjasama'] = df_mitra['tipe_kerjasama'].apply(lambda x: 'Perluasan Bisnis' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+    
+    # Fill enum and varchar NOT NULL columns with defaults
+    df_mitra['status_mitra'] = df_mitra['status_mitra'].apply(lambda x: 'On-going' if pd.isna(x) or str(x).strip() not in ('On-going', 'Done') else str(x).strip())
+    df_mitra['jenis_mitra'] = df_mitra['jenis_mitra'].apply(lambda x: 'Lainnya' if pd.isna(x) or str(x).strip() not in ('Corporate', 'Sekolah', 'Lainnya') else str(x).strip())
+    df_mitra['nama_mitra'] = df_mitra['nama_mitra'].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+    df_mitra['nama_instansi'] = df_mitra['nama_instansi'].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
 
     for col in ['status_kemitraan', 'is_leapverse', 'is_elsa', 'is_classin', 'is_mitra_leap']:
         if col in df_mitra.columns:
