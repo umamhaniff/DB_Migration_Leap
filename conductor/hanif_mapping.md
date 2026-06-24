@@ -380,3 +380,29 @@ Semua kendala mapping operasional yang sebelumnya terhambat kini telah diselesai
 * Seluruh tipe data string Pandas (`string` / `string[python]`) di-cast ke tipe data `object` sebelum proses penyimpanan Pickle untuk memastikan kompatibilitas penuh dengan serializer Python 3.13.
 
 ---
+
+### 🟢 Update 24 Juni 2026: Sinkronisasi Skema & Validasi Data Lapangan
+
+Guna mengatasi kegagalan integrasi database (*warnings* dan *FK constraint failures*) saat proses *insert* aktual, telah dilakukan pembaruan implementasi pemetaan dan pembersihan data di seluruh notebook Hanif:
+
+#### 1. Pembersihan Khusus No WA Siswa (`siswa`)
+* **Masalah**: Kolom `wa_siswa`, `wa_ortu`, dan `wa_administrasi` di database baru dibatasi `VARCHAR(20)`. Data lama mengandung nilai kotor (beberapa nomor digabung dengan slash `/` atau dibubuhi teks deskripsi) yang memicu error *data truncated*.
+* **Solusi**: Diterapkan fungsi pembersih khusus `clean_wa_number` pada Fase 4:
+  1. Jika terdapat karakter slash `/`, hanya potongan teks sebelum slash pertama yang diambil.
+  2. Karakter non-angka dan non-simbol `+` dibersihkan sepenuhnya.
+  3. Hasil akhir dipotong maksimal 15 karakter angka/simbol (sesuai panjang normal nomor telepon lokal/internasional) sehingga dijamin masuk ke kolom `VARCHAR(20)`.
+
+#### 2. Auto-Increment & Pemetaan Dinamis ID Siswa (`mapping_siswa`)
+* **Masalah**: Kolom `id_siswa` di database baru (`db_new.siswa`) bertipe integer auto-increment, sehingga database akan menghasilkan nilai `1, 2, 3, dst.` secara otomatis sesuai urutan sisipan. Pemetaan sebelumnya menggunakan `extract_int(idsiswa)` yang memicu ketidaksinronan relasi dengan tabel anak karena adanya celah (*gaps*) nomor pada ID lama.
+* **Solusi**:
+  1. Kolom `id_siswa` dihapus dari DataFrame `siswa` di berkas ekspor `fase_4_hanif.pkl`. Hal ini membiarkan MySQL mengelola nilai auto-increment secara natural.
+  2. Berkas pemetaan (`idsiswa_lama` ke `id_siswa_baru`) dibuat secara dinamis menggunakan urutan baris (`index + 1`) DataFrame siswa (misal: `'S0000007'` sebagai baris pertama dipetakan ke ID baru `1`).
+  3. Hasil pemetaan diekspor secara terpisah ke `fase_4/mapping_siswa.pkl` (juga disisipkan dalam dictionary utama berkas `.pkl`) dan `extract/cek_csv/mapping_siswa.csv` untuk keperluan audit manual.
+
+#### 3. Penyelarasan Relasi Lintas Tabel & Lintas Fase
+* **Fase 4 (`kursus_siswa`, `siswa_keluar`)**: Kolom `id_siswa` yang menjadi Foreign Key kini dipetakan menggunakan `student_id_map` hasil pemetaan auto-increment dinamis di atas. Kolom `id_kursus` dikembalikan ke format string asli (seperti `'K00001'`) untuk mencocokkan tipe data VARCHAR pada skema `kursus` database baru.
+* **Fase 5 (`rapor_siswa`, `rapor_lacak`)**: Ditambahkan mekanisme otomatis pada awal proses transformasi untuk memuat berkas pemetaan `../fase_4/mapping_siswa.pkl` secara dinamis. Kolom `id_siswa` pada tabel-tabel rapor ini diselaraskan sepenuhnya dengan ID baru siswa berdasarkan hasil pemetaan tersebut.
+
+#### 4. Pembersihan Data Pelamar (`pelamar`)
+* **Pembersihan Tanggal**: Mengubah nilai pengisian default untuk kolom `created_at` yang kosong dari `'1970-01-01'` menjadi `'2020-01-01 00:00:00'`. Ini mencegah kegagalan konversi zona waktu lokal (WIB/UTC+7) ke UTC yang sebelumnya menghasilkan waktu `'1969-12-31'` (di luar batas minimum tipe data `TIMESTAMP` MySQL).
+* **Pembersihan Nilai Integer**: Kolom `toefl` (skor TOEFL) dan `hasiliq` (skor IQ) dibersihkan secara ketat menggunakan `pd.to_numeric` dengan `errors='coerce'` untuk mengubah string kotor seperti `'asd'` menjadi `NaN` lalu diisi dengan `0` sebelum dikonversi ke tipe integer. Hal ini menghilangkan kegagalan input tipe data pada kolom tujuan.

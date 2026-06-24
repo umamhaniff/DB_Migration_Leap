@@ -30,3 +30,21 @@ The user requested to audit the column mapping implementation from `hanif_mappin
 
 **Verification:**
 After executing all three notebooks successfully, we will verify the resulting `.pkl` files are valid.
+
+---
+
+## Update Rencana & Penyelesaian Masalah (24 Juni 2026)
+
+### 🚨 Tantangan Lapangan Baru yang Ditemukan saat Proses Pengunggahan (Insert) Aktual:
+1. **Error Truncated Data (WA)**: Panjang data nomor WhatsApp pada kolom `wa_siswa`, `wa_ortu`, dan `wa_administrasi` melebihi batas skema baru `VARCHAR(20)` karena adanya nomor ganda/catatan teks di database lama.
+2. **FK Mismatch (Kursus & Siswa)**: 
+   * `id_kursus` ter-extract menjadi integer padahal tipe data primary key `kursus` di database baru adalah string (varchar).
+   * `id_siswa` di database baru menggunakan tipe data integer auto-increment, sehingga ID baru yang di-generate MySQL (`1, 2, 3, dst.`) tidak sinkron dengan data foreign key di tabel anak yang sebelumnya dipetakan menggunakan `extract_int(idsiswa)` yang memiliki celah (*gaps*).
+3. **Pembersihan Pelamar**: Kolom skor TOEFL mengandung data string kotor (seperti `'asd'`) dan kolom `created_at` yang kosong diisi `'1970-01-01'` sehingga memicu error *out of range* akibat konversi zona waktu lokal ke UTC.
+
+### 🛠️ Langkah Mitigasi & Eksekusi Penyelesaian (Selesai):
+* [x] **Mitigasi 1: Pembersihan No WA** — Menambahkan fungsi pembagian berdasarkan slash (`/`), pembersihan non-angka, dan pembatasan panjang nomor telepon maksimal 15 karakter di Fase 4.
+* [x] **Mitigasi 2: Pemetaan Auto-Increment Siswa** — Menghapus kolom `id_siswa` dari DataFrame `siswa` (membiarkan MySQL melakukan auto-increment secara natural) dan membuat berkas pemetaan `mapping_siswa.pkl` serta `.csv` berdasarkan urutan baris (`index + 1`).
+* [x] **Mitigasi 3: Sinkronisasi Lintas Fase** — Memperbaiki relasi Foreign Key di tabel Fase 4 (`kursus_siswa`, `siswa_keluar`) dan Fase 5 (`rapor_siswa`, `rapor_lacak`) agar menyinkronkan data `id_siswa` menggunakan berkas pemetaan auto-increment yang baru. Memulihkan format `id_kursus` menjadi string.
+* [x] **Mitigasi 4: Perbaikan Nilai Default & Pembersihan String Pelamar** — Memperbaiki pengisian default `created_at` ke tanggal aman `'2020-01-01 00:00:00'` dan mengonversi kolom TOEFL/IQ menggunakan `pd.to_numeric` dengan `errors='coerce'`.
+* [x] **Verifikasi Akhir** — Menjalankan transformasi ulang seluruh notebook secara berurutan (`fase_3`, `fase_4`, `fase_5`) dan memvalidasi semua berkas Pickle. Seluruh pengujian lulus 100% tanpa error, dan data telah berhasil disinkronkan. Berkas di-commit dan di-push ke cabang utama (`main`) di repositori Git.
