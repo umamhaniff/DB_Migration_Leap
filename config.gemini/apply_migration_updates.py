@@ -382,10 +382,12 @@ if 'pelamar' in raw_data:
     
     for text_col in ['alamat', 'domisili', 'wa', 'ig', 'fb', 'sosmed', 'laptop', 'internet', 'kegiatan', 'rencana', 'mobilitas', 'info', 'wfo', 'jenis', 'work', 'ppdk', 'pengalaman', 'wawasan', 'sehat', 'ajar', 'app', 'apps', 'link', 'resign', 'piciq', 'picminat', 'picpribadi']:
         df_pel_extended[text_col] = df_pel_extended[text_col].fillna('-')
-    for int_col in ['toefl', 'hasiliq']:
-        df_pel_extended[int_col] = df_pel_extended[int_col].fillna(0)
+    # ponytail: clean and convert integer columns to prevent string values like 'asd'
+    df_pel_extended['toefl'] = pd.to_numeric(df_pel_extended['toefl'], errors='coerce').fillna(0).astype(int)
+    df_pel_extended['hasiliq'] = pd.to_numeric(df_pel_extended['hasiliq'], errors='coerce').fillna(0).astype(int)
     df_pel_extended['bergabung'] = df_pel_extended['bergabung'].fillna(pd.to_datetime('1970-01-01').date())
-    df_pel_extended['created_at'] = df_pel_extended['created_at'].fillna(pd.to_datetime('1970-01-01'))
+    # ponytail: use safe modern date for created_at to avoid MySQL TIMESTAMP out of range errors due to timezone conversion
+    df_pel_extended['created_at'] = df_pel_extended['created_at'].fillna(pd.to_datetime('2020-01-01 00:00:00'))
     
     mapping = {
         'id_pelamar': 'id_pelamar', 'id_pengajuan': 'id_pengajuan', 'email': 'email_pelamar',
@@ -544,6 +546,18 @@ if 'siswa' in raw_data:
             except: continue
         try: return pd.to_datetime(s, errors='coerce').date()
         except: return None
+
+    # ponytail: clean WA number, handle slash and limit to 15 characters (digits/plus)
+    def clean_wa_number(x):
+        if pd.isna(x) or str(x).strip() == '':
+            return '-'
+        s = str(x).strip()
+        if '/' in s:
+            s = s.split('/')[0].strip()
+        cleaned = ''.join([c for c in s if c.isdigit() or c == '+'])
+        if not cleaned:
+            return '-'
+        return cleaned[:15]
 
     df = pd.DataFrame(raw_data['siswa'])
     df['id_siswa_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
@@ -757,7 +771,7 @@ if 'siswa' in raw_data:
         
     # Fill empty/NULL target columns with defaults
     cols_to_dash = [
-        'nama_lengkap', 'nama_panggilan', 'email', 'wa_siswa', 'wa_ortu', 'wa_administrasi',
+        'nama_lengkap', 'nama_panggilan', 'email',
         'metode_pembayaran', 'status_pendaftaran', 'rekomendasi', 'sumber_info', 'kewarganegaraan',
         'nama_ayah', 'nama_ibu', 'nama_wali',
         'pendidikan_ayah', 'pendidikan_ibu', 'pendidikan_wali',
@@ -766,6 +780,13 @@ if 'siswa' in raw_data:
     for col in cols_to_dash:
         if col in df_final.columns:
             df_final[col] = df_final[col].apply(lambda x: '-' if pd.isna(x) or str(x).strip() == '' else str(x).strip())
+        else:
+            df_final[col] = '-'
+            
+    # ponytail: apply custom WA number cleaning and slicing to avoid MySQL truncation errors
+    for col in ['wa_siswa', 'wa_ortu', 'wa_administrasi']:
+        if col in df_final.columns:
+            df_final[col] = df_final[col].apply(clean_wa_number)
         else:
             df_final[col] = '-'
             
@@ -779,7 +800,20 @@ if 'siswa' in raw_data:
             df_final[col] = 'Lainnya'
             
     target_cols = list(dict.fromkeys([c for c in list(mapping.values()) if c in df_final.columns] + ['pekerjaan_ibu', 'deleted_at']))
+    # ponytail: remove id_siswa from target_cols to allow MySQL auto-increment to assign IDs automatically
+    target_cols = [c for c in target_cols if c != 'id_siswa']
     transformed_dfs['siswa'] = df_final[target_cols]
+
+    # ponytail: build and save student ID mapping (old string ID -> new auto-incremented integer ID based on insertion order)
+    student_id_map = dict(zip(df['idsiswa'], df.index + 1))
+    df_mapping = pd.DataFrame({
+        'idsiswa_lama': df['idsiswa'],
+        'id_siswa_baru': df.index + 1
+    })
+    df_mapping['id_siswa_baru'] = df_mapping['id_siswa_baru'].astype('Int64')
+    # Save to the current working directory of the notebook execution (which is already 'fase_4')
+    pd.to_pickle(df_mapping, 'mapping_siswa.pkl')
+    transformed_dfs['mapping_siswa'] = df_mapping
 
 # Build kursus_siswa dynamically from db_old.jadwal_siswa, db_old.jadwal
 # ponytail: query adjusted to select is_keluar and is_lulus; deduplicated on id_siswa and id_kursus
@@ -797,8 +831,10 @@ cursor_old.execute(\"\"\"
 df_ks_raw = pd.DataFrame(cursor_old.fetchall())
 
 if not df_ks_raw.empty:
-    df_ks_raw['id_siswa'] = df_ks_raw['idsiswa'].apply(extract_int).astype('Int64')
-    df_ks_raw['id_kursus'] = df_ks_raw['id_kursus'].apply(extract_int).astype('Int64')
+    # ponytail: map id_siswa using student_id_map based on auto-increment IDs
+    df_ks_raw['id_siswa'] = df_ks_raw['idsiswa'].map(student_id_map).astype('Int64')
+    # ponytail: keep id_kursus as string to match db_new.kursus string primary keys (e.g. 'K00001')
+    df_ks_raw['id_kursus'] = df_ks_raw['id_kursus'].apply(lambda x: str(x).strip() if pd.notna(x) and str(x).strip() not in ('', 'nan', 'None') else None)
     
     # Deduplicate on ['id_siswa', 'id_kursus'] using Pandas .groupby().first()
     df_ks_raw = df_ks_raw.groupby(['id_siswa', 'id_kursus'], as_index=False).first()
@@ -877,7 +913,8 @@ if 'siswa_keluar' in raw_data:
                 return 6
             return 8
 
-        df['id_siswa'] = df['idsiswa'].apply(extract_int).astype('Int64')
+        # ponytail: map id_siswa using student_id_map based on auto-increment IDs
+        df['id_siswa'] = df['idsiswa'].map(student_id_map).astype('Int64')
         df['id_keluar'] = df['idsiswa_keluar'].apply(extract_int).astype('Int64')
         df['id_kursus'] = df['id_siswa'].map(student_to_course_map)
         df['id_tag_keluar'] = df.apply(detect_tag, axis=1).astype('Int64')
@@ -1131,6 +1168,21 @@ def extract_int(s):
     nums = re.findall(r'\\d+', str(s))
     return int(nums[0]) if nums else None
 
+# ponytail: load student ID auto-increment mapping from Fase 4
+import os
+student_id_map = {}
+mapping_path = '../fase_4/mapping_siswa.pkl'
+if os.path.exists(mapping_path):
+    df_map = pd.read_pickle(mapping_path)
+    student_id_map = dict(zip(df_map['idsiswa_lama'], df_map['id_siswa_baru']))
+
+def map_student_id(idsiswa_val):
+    if pd.isna(idsiswa_val): return None
+    val_str = str(idsiswa_val).strip()
+    if val_str in student_id_map:
+        return student_id_map[val_str]
+    return extract_int(val_str)
+
 # 7. rapor -> rapor_siswa
 if 'rapor' in raw_data:
     df = pd.DataFrame(raw_data['rapor'])
@@ -1141,7 +1193,8 @@ if 'rapor' in raw_data:
     rapor_id_map = dict(zip(df['idrapor'], df['id_rapor_siswa_new']))
     df['id_rapor_siswa'] = df['id_rapor_siswa_new']
     
-    df['id_siswa_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
+    # ponytail: map id_siswa using the loaded student ID mapping based on auto-increment IDs
+    df['id_siswa_clean'] = df['idsiswa'].apply(map_student_id).astype('Int64')
     df['id_jadwal_clean'] = df['idjadwal'].apply(extract_int).astype('Int64')
     
     # Map idp_nilai string (e.g. 'P00745') to new parameter_nilai auto-increment ID
@@ -1189,7 +1242,8 @@ if 'history_rapor' in raw_data and 'rapor_siswa_file' in transformed_dfs:
     df_file_old = pd.DataFrame(raw_data['file_rapor_siswa'])[['idfile', 'idsiswa', 'idjadwal']]
     df_file_old['id_rapor_siswa_file'] = df_file_old['idfile'].map(file_id_map).astype('Int64')
     
-    df['id_siswa_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
+    # ponytail: map id_siswa using the loaded student ID mapping based on auto-increment IDs
+    df['id_siswa_clean'] = df['idsiswa'].apply(map_student_id).astype('Int64')
     df['id_jadwal_clean'] = df['idjadwal'].apply(extract_int).astype('Int64')
     
     df_merged = df.merge(df_file_old[['idsiswa', 'idjadwal', 'id_rapor_siswa_file']], on=['idsiswa', 'idjadwal'], how='left')
