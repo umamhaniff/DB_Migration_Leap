@@ -104,3 +104,5 @@ role_id,model_type,model_id,id_division
 1,App\Models\User,U00068,7
 3,App\Models\User,U00069,4
 1,App\Models\User,U00069,7
+5,App\Models\User,U00070,6
+7,App\Models\User,U00070,1
