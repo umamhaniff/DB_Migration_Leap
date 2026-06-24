@@ -709,11 +709,18 @@ if 'siswa' in raw_data:
     # Resolve duplicate no_induk
     def fix_no_induk(row):
         val = row.get('no_induk')
+        idsiswa = row.get('idsiswa', '')
         if pd.isna(val):
-            return f"TEMP-{row['idsiswa']}"
+            return '-'
         s = str(val).strip()
-        if s in ('', '-', '#N/A', 'None', 'nan', 'NULL'):
-            return f"TEMP-{row['idsiswa']}"
+        # ponytail: bad/invalid no_induk values → strip
+        if s in ('', '-', '#N/A', 'None', 'nan', 'NULL', 'NODATAYET', '0000'):
+            return '-'
+        # ponytail: specific known-bad no_induk by idsiswa
+        if idsiswa == 'S0000522' and s == '00NF3':
+            return '-'
+        if idsiswa == 'S0000549' and s == '0000':
+            return '-'
         return s
     df['no_induk'] = df.apply(fix_no_induk, axis=1)
 
@@ -746,7 +753,7 @@ if 'siswa' in raw_data:
         'nama_lengkap': 'nama_lengkap', 'panggilan': 'nama_panggilan', 'jkel': 'jenis_kelamin',
         'nama_sekolah': 'asal_sekolah', 'level_sekolah': 'tingkat_sekolah', 'nama_ortu': 'nama_orang_tua',
         'pekerjaan_ortu': 'pekerjaan_orang_tua', 'tmp_lahir': 'tempat_lahir', 'tgl_lahir': 'tanggal_lahir',
-        'no_induk': 'nomor_induk', 'email': 'email', 'idcalon': 'id_calon',
+        'no_induk': 'nomor_induk', 'email': 'email',
         'id_provinsi': 'id_provinsi', 'id_kabupaten': 'id_kabupaten', 'id_kecamatan': 'id_kecamatan',
         'id_kelurahan': 'id_kelurahan', 'id_mitra': 'id_mitra', 'nisn': 'nisn', 'nik': 'nik',
         'kewarganegaraan': 'kewarganegaraan', 'agama': 'agama', 'rt': 'rt', 'rw': 'rw',
@@ -797,6 +804,12 @@ if 'siswa' in raw_data:
     df_final = df.rename(columns=mapping)
     df_final['pekerjaan_ibu'] = 'Lainnya'
     df_final['deleted_at'] = None
+
+    # ponytail: replace 'NODATAYET' placeholder with '-' across affected text columns
+    nodatayet_cols = ['domisili', 'asal_sekolah', 'tingkat_sekolah', 'tempat_lahir', 'nomor_induk']
+    for col in nodatayet_cols:
+        if col in df_final.columns:
+            df_final[col] = df_final[col].replace('NODATAYET', '-')
     
     # Fill empty/NULL target columns with defaults
     cols_to_dash = [
@@ -848,6 +861,13 @@ if 'siswa' in raw_data:
     })
     df_mapping['id_siswa_baru'] = df_mapping['id_siswa_baru'].astype('Int64')
     pd.to_pickle(df_mapping, 'mapping_siswa.pkl')
+    # ponytail: also save to fase_5 for teammate scripts
+    try:
+        import os
+        if os.path.exists('../fase_5'):
+            pd.to_pickle(df_mapping, '../fase_5/mapping_siswa.pkl')
+    except Exception:
+        pass
     transformed_dfs['mapping_siswa'] = df_mapping
 
 # Build kursus_siswa dynamically from db_old.jadwal_siswa, db_old.jadwal
@@ -873,7 +893,10 @@ if not df_ks_raw.empty:
     
     # Deduplicate on ['id_siswa', 'id_kursus'] using Pandas .groupby().first()
     df_ks_raw = df_ks_raw.groupby(['id_siswa', 'id_kursus'], as_index=False).first()
-    
+
+    # ponytail: drop orphan K00017 — tidak ada di tabel kursus db_new (dihapus Afrida)
+    df_ks_raw = df_ks_raw[df_ks_raw['id_kursus'] != 'K00017'].reset_index(drop=True)
+
     df_ks_raw['tanggal_mulai'] = df_ks_raw['tanggal_mulai'].apply(parse_date_f4)
     
     def map_metode(x):

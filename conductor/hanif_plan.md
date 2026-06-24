@@ -37,17 +37,35 @@ After executing all three notebooks successfully, we will verify the resulting `
 
 ### 🚨 Tantangan Lapangan Baru yang Ditemukan saat Proses Pengunggahan (Insert) Aktual:
 1. **Error Truncated Data (WA)**: Panjang data nomor WhatsApp pada kolom `wa_siswa`, `wa_ortu`, dan `wa_administrasi` melebihi batas skema baru `VARCHAR(20)` karena adanya nomor ganda/catatan teks di database lama.
-2. **FK Mismatch (Kursus & Siswa)**: 
+2. **FK Mismatch (Kursus & Siswa)**:
    * `id_kursus` ter-extract menjadi integer padahal tipe data primary key `kursus` di database baru adalah string (varchar).
    * `id_siswa` di database baru menggunakan tipe data integer auto-increment, sehingga ID baru yang di-generate MySQL (`1, 2, 3, dst.`) tidak sinkron dengan data foreign key di tabel anak yang sebelumnya dipetakan menggunakan `extract_int(idsiswa)` yang memiliki celah (*gaps*).
 3. **Pembersihan Pelamar**: Kolom skor TOEFL mengandung data string kotor (seperti `'asd'`) dan kolom `created_at` yang kosong diisi `'1970-01-01'` sehingga memicu error *out of range* akibat konversi zona waktu lokal ke UTC.
 
-### 🛠️ Langkah Mitigasi & Eksekusi Penyelesaian (Selesai):
+### 🛠️ Langkah Mitigasi & Eksekusi Penyelesaian:
 * [x] **Mitigasi 1: Pembersihan No WA** — Menambahkan fungsi pembagian berdasarkan slash (`/`), pembersihan non-angka, dan pembatasan panjang nomor telepon maksimal 15 karakter di Fase 4.
 * [x] **Mitigasi 2: Pemetaan Auto-Increment Siswa** — Menghapus kolom `id_siswa` dari DataFrame `siswa` (membiarkan MySQL melakukan auto-increment secara natural) dan membuat berkas pemetaan `mapping_siswa.pkl` serta `.csv` berdasarkan urutan baris (`index + 1`).
 * [x] **Mitigasi 3: Sinkronisasi Lintas Fase** — Memperbaiki relasi Foreign Key di tabel Fase 4 (`kursus_siswa`, `siswa_keluar`) dan Fase 5 (`rapor_siswa`, `rapor_lacak`) agar menyinkronkan data `id_siswa` menggunakan berkas pemetaan auto-increment yang baru. Memulihkan format `id_kursus` menjadi string.
 * [x] **Mitigasi 4: Perbaikan Nilai Default & Pembersihan String Pelamar** — Memperbaiki pengisian default `created_at` ke tanggal aman `'2020-01-01 00:00:00'` dan mengonversi kolom TOEFL/IQ menggunakan `pd.to_numeric` dengan `errors='coerce'`.
-* [x] **Mitigasi 5: Penghapusan Seluruh PK Auto-Increment & Pembuatan Pemetaan Induk Lintas Fase** — Menghapus seluruh kolom primary key yang bertipe auto-increment dari DataFrame di Fase 3, 4, dan 5. Menghasilkan berkas pemetaan (`id_lama` ke `id_baru` berupa index + 1) dalam bentuk `.pkl` dan `.csv` untuk seluruh tabel induk: `pelamar`, `pengajuan_karyawan`, `siswa`, `mitra`, `mitra_progres`, `siswa_mitra`, `rapor_siswa`, dan `rapor_siswa_file`. Memetakan kolom foreign key pada seluruh tabel anak (seperti progres pelamar, progres mitra, riwayat sekolah, dan rapor siswa) menggunakan berkas pemetaan secara dinamis dan offline (in-memory).
+* [x] **Mitigasi 5: Penghapusan Seluruh PK Auto-Increment & Pembuatan Pemetaan Induk Lintas Fase** — Menghapus seluruh kolom primary key yang bertipe auto-increment dari DataFrame di Fase 3, 4, dan 5. Menghasilkan berkas pemetaan (`id_lama` ke `id_baru` berupa index + 1) dalam bentuk `.pkl` dan `.csv` untuk seluruh tabel induk: `pelamar`, `pengajuan_karyawan`, `siswa`, `mitra`, `mitra_progres`, `siswa_mitra`, `rapor_siswa`, dan `rapor_siswa_file`. Memetakan kolom foreign key pada seluruh tabel anak menggunakan berkas pemetaan secara dinamis dan offline (in-memory).
 * [x] **Mitigasi 6: Pembersihan Kolom Alamat Domisili** — Memotong data `domisili` pada koma pertama yang ditemukan dan membatasi teks maksimal 100 karakter untuk menghindari truncation error.
-* [x] **Mitigasi 7: Penghapusan PK `id_kursus_siswa` & Proteksi Nilai Default NOT NULL** — Menghapus primary key `id_kursus_siswa` dari target DataFrame `kursus_siswa` untuk menghindari tabrakan auto-increment MySQL. Menambahkan penanganan tangguh untuk semua kolom `NOT NULL` yang kosong/NULL pada tabel `siswa` (seperti `asal_sekolah`, `tingkat_sekolah`, `nama_orang_tua`, `pekerjaan_orang_tua`, `tempat_lahir`, `path_bukti_bayar` diisi `'-'`; `tanggal_lahir` diisi `'1970-01-01'`; dan `tanggal_upload_bukti` diisi `'2020-01-01 00:00:00'`) serta tabel `mitra` (`status_mitra` diisi `'On-going'`; `jenis_mitra` diisi `'Lainnya'`; serta `nama_mitra` dan `nama_instansi` diisi `'-'`). Hal ini sepenuhnya menyelesaikan masalah duplikasi primer dan kegagalan constraint MySQL.
+* [x] **Mitigasi 7: Penghapusan PK `id_kursus_siswa` & Proteksi Nilai Default NOT NULL** — Menghapus primary key `id_kursus_siswa` dari target DataFrame `kursus_siswa` untuk menghindari tabrakan auto-increment MySQL. Menambahkan penanganan tangguh untuk semua kolom `NOT NULL` yang kosong/NULL pada tabel `siswa` dan `mitra`. Hal ini sepenuhnya menyelesaikan masalah duplikasi primer dan kegagalan constraint MySQL.
 * [x] **Verifikasi & Validasi Sukses** — Menjalankan penyuntingan ulang seluruh notebook secara berurutan dan memvalidasi semuanya via `test_migration_pickles.py` dengan sukses 100%. Melakukan commit dan push ke repositori tanpa menyertakan berkas milik rekan tim (Cimut/Afrida) sesuai arahan.
+* [x] **Mitigasi 8: Penghapusan Mapping `id_calon`** — Menghapus kolom `idcalon → id_calon` dari mapping `patch_fase_4()` di `apply_migration_updates.py` karena tabel calon di db_new belum tersedia. Kolom ini nullable sehingga tidak blocking insert. Dicatat sebagai backlog post-deadline.
+* [x] **Mitigasi 9: Perbaikan Data `nomor_induk` & Pembersihan `NODATAYET`** — Mengubah fungsi `fix_no_induk` agar nilai invalid (`#N/A`, `0000`, `NODATAYET`) dan kasus spesifik (`S0000549/0000`, `S0000522/00NF3`) menghasilkan `'-'`. Menambahkan pembersihan umum `NODATAYET → '-'` di kolom `domisili`, `asal_sekolah`, `tingkat_sekolah`, `tempat_lahir`, `nomor_induk` pada `df_final`.
+* [x] **Mitigasi 10: Drop Baris Orphan `K00017` di `kursus_siswa`** — Menambahkan filter setelah deduplication untuk menghapus 1 baris `kursus_siswa` yang `id_kursus = 'K00017'` karena kursus tersebut tidak ada di db_new (di-filter oleh Afrida di Fase 1). Total baris `kursus_siswa` turun dari 1.770 → 1.769.
+
+---
+
+## 🗂️ Backlog & Known Issues (24 Juni 2026)
+
+### ⏸️ SKIP — Kolom `id_calon` pada tabel `siswa`
+- **Status:** ✅ Mapping dihapus dari code per 24 Juni 2026 (`patch_fase_4()` di `apply_migration_updates.py`).
+- **Konteks:** `id_calon` adalah FK di tabel `siswa` yang seharusnya merujuk ke tabel calon siswa di db_new. Mapping-nya belum tersedia/belum dikerjakan oleh tim saat ini.
+- **Tindakan ke depan:** Perlu dibuat mapping `id_calon` dari data calon siswa lama ke ID baru di db_new, lalu diinjeksi ulang ke `patch_fase_4()`.
+- **Prioritas:** Low (post-deadline), tidak blocking insert karena kolom ini nullable.
+
+### ✅ SELESAI — Kolom `id_kursus` pada tabel `kursus_siswa`
+- **Status:** Terselesaikan per 24 Juni 2026.
+- **Root Cause:** 1 baris `kursus_siswa` merujuk ke `K00017` yang di-filter Afrida dari tabel `kursus` db_new. K00008 juga tidak ada sejak awal, namun tidak muncul di data `kursus_siswa`.
+- **Solusi:** Drop 1 baris orphan `K00017` dari `df_ks_raw` setelah deduplication di `patch_fase_4()`. Total baris turun dari 1.770 → 1.769.
