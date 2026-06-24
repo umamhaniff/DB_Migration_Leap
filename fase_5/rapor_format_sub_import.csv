@@ -1,0 +1,122 @@
+id_rapor_format_sub,id_rapor_format,sub_judul_rapor,urutan
+D00001,F00001,Class Participation,1
+D00002,F00001,Oral,2
+D00003,F00001,Listening,3
+D00005,F00002,Oral and Listening,1
+D00006,F00004,Class Participation,1
+D00007,F00004,Oral,2
+D00008,F00004,Listening,3
+D00009,F00004,Writing,4
+D00010,F00005,Oral and Listening,1
+D00011,F00005,Writing and Reading,2
+D00012,F00007,Class Participation,1
+D00013,F00007,Oral,2
+D00014,F00007,Listening,3
+D00015,F00007,Writing,4
+D00016,F00008,Oral and Listening,1
+D00017,F00008,Writing and Reading,2
+D00018,F00012,Good Points,1
+D00019,F00012,Things to Improve,2
+D00020,F00010,Class Participation,1
+D00021,F00010,Oral,2
+D00022,F00010,Listening,3
+D00023,F00013,Class Participation,1
+D00024,F00013,Oral,2
+D00025,F00013,Listening,1
+D00026,F00015,Good Points,1
+D00027,F00015,Things to Improve,2
+D00028,F00006,Comments,1
+D00029,F00006,Final Result,2
+D00030,F00003,Comments,1
+D00031,F00003,Final Result,2
+D00032,F00016,Class Participation,1
+D00033,F00016,Discipline,2
+D00034,F00016,Attitude,3
+D00035,F00017,Creativity,1
+D00036,F00017,Problem Solving,2
+D00037,F00017,Critical Thinking,3
+D00038,F00017,Communication,4
+D00039,F00017,Innovation,5
+D00040,F00017,Total Score,6
+D00041,F00017,Grade,7
+D00042,F00018,Comments,1
+D00043,F00012,Final Result,3
+D00044,F00015,Final Result,3
+D00045,F00009,Comments,1
+D00046,F00009,Final Result,2
+D00047,F00019,Classroom Participation,1
+D00048,F00019,Oral,2
+D00049,F00019,Writing,3
+D00050,F00019,Comment,4
+D00053,F00028,Comments,1
+D00054,F00028,Final Result,2
+D00055,F00025,Comments,1
+D00056,F00025,Final Result,2
+D00057,F00024,Oral,1
+D00058,F00024,Written,2
+D00059,F00026,Class Participation,1
+D00060,F00026,Oral,2
+D00061,F00026,Listening,3
+D00062,F00026,Writing,4
+D00063,F00023,Class Participation,1
+D00064,F00023,Oral,2
+D00065,F00023,Listening,3
+D00066,F00023,Writing,4
+D00070,F00021,Oral,1
+D00073,F00027,Oral and Listening,1
+D00074,F00027,Writing and Reading,2
+D00079,F00020,Class Participation,1
+D00080,F00020,Oral,2
+D00081,F00020,Listening,3
+D00082,F00022,Comments,1
+D00083,F00022,Final Result,2
+D00084,F00029,Class Participation,1
+D00085,F00029,Oral,2
+D00086,F00029,Listening,3
+D00087,F00029,Writing,4
+D00088,F00030,Oral and Listening,1
+D00089,F00030,Writing and Reading,2
+D00090,F00031,Comments,1
+D00091,F00031,Final Result,2
+D00092,F00032,Class Participation,1
+D00093,F00032,Discipline,2
+D00094,F00032,Attitude,3
+D00095,F00033,Programming Skills,1
+D00096,F00033,Critical Thinking & Problem Solving,2
+D00097,F00033,Creativity & Innovation,3
+D00098,F00033,Communication,4
+D00099,F00033,Ethics and Responsibility,5
+D00100,F00033,Total Score,6
+D00101,F00033,Grade,7
+D00102,F00034,Comments,1
+D00103,F00037,Comments,1
+D00104,F00036,Programming Skills,1
+D00105,F00036,Critical Thinking & Problem Solving,2
+D00106,F00036,Creativity & Innovation,3
+D00107,F00036,Communication,4
+D00108,F00036,Ethics and Responsibility,5
+D00109,F00036,Total Score,6
+D00110,F00036,Grade,7
+D00111,F00035,Class Participation,1
+D00112,F00035,Discipline,2
+D00113,F00035,Attitude,3
+D00114,F00020,Writing,4
+D00115,F00038,Class Participation,1
+D00116,F00038,Discipline,2
+D00117,F00038,Attitude,3
+D00118,F00039,Problem and Content,1
+D00119,F00039,Visual Design,2
+D00120,F00039,Web Structure and Interactivity,3
+D00121,F00039,Effort and Creativity,4
+D00122,F00039,Communication,5
+D00123,F00039,Total,6
+D00124,F00039,Grade,7
+D00125,F00040,Comments,1
+D00129,F00044,Comments,1
+D00130,F00044,Final Result,2
+D00131,F00043,Oral,1
+D00132,F00043,Written,2
+D00133,F00042,Class Participation,1
+D00134,F00042,Oral,2
+D00135,F00042,Listening,3
+D00136,F00042,Writing,4
