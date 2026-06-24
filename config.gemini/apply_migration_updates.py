@@ -224,10 +224,21 @@ def clean_name_without_titles(s):
 if 'pengajuan' in raw_data:
     df = pd.DataFrame(raw_data['pengajuan'])
     df['status'] = df['status'].replace('Sudah Direvisi', 'Sudah Revisi')
-    df['id_pengajuan'] = df['idpengajuan'].astype('Int64')
+    df['id_pengajuan_new'] = df.index + 1
+    pengajuan_id_map = dict(zip(df['idpengajuan'], df['id_pengajuan_new']))
+    
+    # ponytail: build and save pengajuan_karyawan ID mapping (old ID -> new auto-incremented ID)
+    df_mapping_peng = pd.DataFrame({
+        'idpengajuan_lama': df['idpengajuan'],
+        'id_pengajuan_baru': df['id_pengajuan_new']
+    })
+    df_mapping_peng['id_pengajuan_baru'] = df_mapping_peng['id_pengajuan_baru'].astype('Int64')
+    pd.to_pickle(df_mapping_peng, 'mapping_pengajuan_karyawan.pkl')
+    transformed_dfs['mapping_pengajuan_karyawan'] = df_mapping_peng
+    
     df['id_user'] = df['idusers']
     mapping = {
-        'id_pengajuan': 'id_pengajuan', 'id_user': 'id_user', 'keterangan': 'posisi',
+        'id_user': 'id_user', 'keterangan': 'posisi',
         'jumlah': 'jumlah', 'syarat': 'syarat', 'pertanyaan': 'pertanyaan',
         'alur': 'alur_seleksi', 'test': 'daftar_tes', 'status': 'status',
         'created_at': 'created_at'
@@ -238,10 +249,9 @@ if 'pengajuan' in raw_data:
 if 'histori_pengajuan' in raw_data:
     df = pd.DataFrame(raw_data['histori_pengajuan'])
     df['status'] = df['status'].replace('Sudah Direvisi', 'Sudah Revisi')
-    df['id_verifikasi'] = df['idhistori'].astype('Int64')
-    df['id_pengajuan'] = df['idpengajuan'].astype('Int64')
+    df['id_pengajuan'] = df['idpengajuan'].map(pengajuan_id_map).astype('Int64')
     mapping = {
-        'id_verifikasi': 'id_verifikasi', 'id_pengajuan': 'id_pengajuan',
+        'id_pengajuan': 'id_pengajuan',
         'status': 'status_verifikasi_pengajuan', 'catatan': 'catatan',
         'created_at': 'created_at'
     }
@@ -359,6 +369,15 @@ if 'pelamar' in raw_data:
     df_pel_extended['id_pelamar_new'] = df_pel_extended.index + 1
     pelamar_id_map = dict(zip(df_pel_extended['idpelamar'], df_pel_extended['id_pelamar_new']))
     
+    # ponytail: build and save pelamar ID mapping (old ID -> new auto-incremented ID)
+    df_mapping_pel = pd.DataFrame({
+        'idpelamar_lama': df_pel_extended['idpelamar'],
+        'id_pelamar_baru': df_pel_extended['id_pelamar_new']
+    })
+    df_mapping_pel['id_pelamar_baru'] = df_mapping_pel['id_pelamar_baru'].astype('Int64')
+    pd.to_pickle(df_mapping_pel, 'mapping_pelamar.pkl')
+    transformed_dfs['mapping_pelamar'] = df_mapping_pel
+    
     final_user_to_pelamar_id = {}
     for u_id in child_users:
         old_p_id = user_to_pelamar_id.get(u_id)
@@ -368,7 +387,7 @@ if 'pelamar' in raw_data:
             final_user_to_pelamar_id[u_id] = pelamar_id_map.get(u_id)
             
     df_pel_extended['id_pelamar'] = df_pel_extended['id_pelamar_new']
-    df_pel_extended['id_pengajuan'] = df_pel_extended['idpengajuan'].astype('Int64')
+    df_pel_extended['id_pengajuan'] = df_pel_extended['idpengajuan'].map(pengajuan_id_map).astype('Int64')
     
     # ponytail: fill missing NOT NULL columns in pelamar
     df_pel_extended['email'] = df_pel_extended['email'].fillna('-')
@@ -390,7 +409,7 @@ if 'pelamar' in raw_data:
     df_pel_extended['created_at'] = df_pel_extended['created_at'].fillna(pd.to_datetime('2020-01-01 00:00:00'))
     
     mapping = {
-        'id_pelamar': 'id_pelamar', 'id_pengajuan': 'id_pengajuan', 'email': 'email_pelamar',
+        'id_pengajuan': 'id_pengajuan', 'email': 'email_pelamar',
         'nama': 'nama_lengkap', 'panggilan': 'nama_panggilan', 'jenis_kelamin': 'jenis_kelamin',
         'tempat_lahir': 'tempat_lahir', 'tanggal_lahir': 'tanggal_lahir',
         'alamat': 'alamat_ktp', 'domisili': 'alamat_domisili', 'wa': 'nomor_wa',
@@ -412,9 +431,8 @@ if 'pelamar' in raw_data:
 if 'pekerjaan' in raw_data:
     df = pd.DataFrame(raw_data['pekerjaan'])
     df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
-    df['id_pelamar_kerja'] = df['idpekerjaan'].astype('Int64')
     mapping = {
-        'id_pelamar_kerja': 'id_pelamar_kerja', 'id_pelamar': 'id_pelamar',
+        'id_pelamar': 'id_pelamar',
         'namaperusahaan': 'nama_perusahaan', 'periode': 'periode', 'jabatan': 'jabatan',
         'jobdesk': 'deskripsi_kerja'
     }
@@ -426,13 +444,12 @@ if 'pendidikan' in raw_data:
     df['tahun'] = df['tahun'].apply(extract_latest_year).fillna(2000).astype(int)
     df['ipk'] = df['ipk'].apply(clean_ipk).fillna(0.0)
     df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
-    df['id_pelamar_sekolah'] = df['idpendidikan'].apply(extract_int).astype('Int64')
     
     for col in ['sekolah', 'jenjang', 'prodi', 'organisasi']:
         df[col] = df[col].fillna('-')
         
     mapping = {
-        'id_pelamar_sekolah': 'id_pelamar_sekolah', 'id_pelamar': 'id_pelamar',
+        'id_pelamar': 'id_pelamar',
         'sekolah': 'nama_sekolah', 'jenjang': 'jenjang', 'prodi': 'prodi',
         'tahun': 'tahun_lulus', 'ipk': 'ipk', 'organisasi': 'organisasi'
     }
@@ -443,13 +460,12 @@ if 'kursus' in raw_data:
     df = pd.DataFrame(raw_data['kursus'])
     df['tanggal'] = df['tanggal'].apply(parse_date).fillna(pd.to_datetime('1970-01-01').date())
     df['id_pelamar'] = df['idusers'].map(final_user_to_pelamar_id).astype('Int64')
-    df['id_pelamar_kursus'] = df['idkursus'].astype('Int64')
     
     for col in ['nama', 'deskripsi', 'lokasi', 'nosertifikat']:
         df[col] = df[col].fillna('-')
         
     mapping = {
-        'id_pelamar_kursus': 'id_pelamar_kursus', 'id_pelamar': 'id_pelamar',
+        'id_pelamar': 'id_pelamar',
         'nama': 'nama_kursus', 'tanggal': 'tanggal', 'deskripsi': 'deskripsi',
         'lokasi': 'lokasi', 'nosertifikat': 'nomor_sertifikat'
     }
@@ -460,14 +476,13 @@ if 'pelamar_note' in raw_data:
     df = pd.DataFrame(raw_data['pelamar_note'])
     df['status'] = df['status'].replace('baru', 'Baru')
     df['id_pelamar'] = df['idpelamar'].map(pelamar_id_map).astype('Int64')
-    df['id_progres_pelamar'] = df['idnote'].astype('Int64')
     df['id_user'] = df['idusers']
     
     for col in ['note', 'link', 'pertanyaan']:
         df[col] = df[col].fillna('-')
         
     mapping = {
-        'id_progres_pelamar': 'id_progres_pelamar', 'id_pelamar': 'id_pelamar',
+        'id_pelamar': 'id_pelamar',
         'id_user': 'id_user', 'status': 'status_progres_pelamar',
         'note': 'catatan', 'link': 'tautan_file', 'pertanyaan': 'pertanyaan',
         'created_at': 'created_at'
@@ -478,10 +493,9 @@ if 'pelamar_note' in raw_data:
 if 'pelamar_users' in raw_data:
     df = pd.DataFrame(raw_data['pelamar_users'])
     df['id_pelamar'] = df['idpelamar'].map(pelamar_id_map).astype('Int64')
-    df['id_rekrutmen'] = df['idassign'].astype('Int64')
     df['id_user'] = df['idusers']
     mapping = {
-        'id_rekrutmen': 'id_rekrutmen', 'id_pelamar': 'id_pelamar', 'id_user': 'id_user'
+        'id_pelamar': 'id_pelamar', 'id_user': 'id_user'
     }
     transformed_dfs['rekrutmen_pelamar'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
 
@@ -558,6 +572,15 @@ if 'siswa' in raw_data:
         if not cleaned:
             return '-'
         return cleaned[:15]
+
+    # ponytail: clean domisili at the first comma and cap at 100 characters
+    def clean_domisili(x):
+        if pd.isna(x) or str(x).strip() == '':
+            return '-'
+        s = str(x).strip()
+        if ',' in s:
+            s = s.split(',')[0].strip()
+        return s[:100]
 
     df = pd.DataFrame(raw_data['siswa'])
     df['id_siswa_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
@@ -643,8 +666,18 @@ if 'siswa' in raw_data:
     df['id_kabupaten'] = df['kabupaten'].map(kab_map).astype('Int64')
     df['id_kecamatan'] = df['kecamatan'].map(kec_map).astype('Int64')
     df['id_kelurahan'] = df['kelurahan'].map(kel_map).astype('Int64')
-    df['id_mitra'] = df['id_mitra_clean'].astype('Int64')
-    
+
+    # ponytail: build mitra_id_map in-memory using sorted raw mitra data
+    df_mitra_raw = pd.DataFrame(raw_data['mitra'])
+    df_mitra_raw['_sort_key'] = pd.to_datetime(df_mitra_raw['created_at'], errors='coerce').fillna(pd.to_datetime('2020-01-01'))
+    df_mitra_raw = df_mitra_raw.sort_values(by=['_sort_key', 'idmitra']).reset_index(drop=True)
+    mitra_id_map = dict(zip(df_mitra_raw['idmitra'], df_mitra_raw.index + 1))
+
+    # ponytail: map id_mitra using the dynamic in-memory mitra_id_map
+    df['id_mitra'] = df['idmitra'].map(mitra_id_map).astype('Int64')
+
+    df['domisili'] = df['domisili'].apply(clean_domisili)
+
     # ponytail: normalize gender enum, fallback to 'Laki laki' to prevent NOT NULL violation
     def normalize_jkel(val):
         if pd.isna(val): return 'Laki laki'
@@ -655,7 +688,7 @@ if 'siswa' in raw_data:
             return 'Laki laki'
         return 'Laki laki'
     df['jkel'] = df['jkel'].apply(normalize_jkel)
-    
+
     # Clean tgl_daftar using clean_tgl_daftar(row)
     def clean_tgl_daftar(row):
         tgl = parse_date_f4(row.get('tgl_daftar'))
@@ -667,12 +700,12 @@ if 'siswa' in raw_data:
             if year_part.isdigit():
                 year_val = int(year_part)
                 if 2000 <= year_val <= 2026:
-                    rest_part = no_induk[4:]
-                    if any(c in '123456789' for c in rest_part):
-                        return pd.to_datetime(f"{year_part}-07-01").date()
+                     rest_part = no_induk[4:]
+                     if any(c in '123456789' for c in rest_part):
+                         return pd.to_datetime(f"{year_part}-07-01").date()
         return pd.to_datetime('1970-01-01').date()
     df['tgl_daftar'] = df.apply(clean_tgl_daftar, axis=1)
-    
+
     # Resolve duplicate no_induk
     def fix_no_induk(row):
         val = row.get('no_induk')
@@ -683,7 +716,7 @@ if 'siswa' in raw_data:
             return f"TEMP-{row['idsiswa']}"
         return s
     df['no_induk'] = df.apply(fix_no_induk, axis=1)
-    
+
     seen_no_induk = {}
     new_no_induk_list = []
     for _, row in df.iterrows():
@@ -725,7 +758,7 @@ if 'siswa' in raw_data:
         'jenjang_wali': 'pendidikan_wali', 'penghasilan_wali': 'penghasilan_wali',
         'wapeserta': 'wa_siswa', 'wawalmur': 'wa_ortu', 'waadmin': 'wa_administrasi',
         'sts_pengisian': 'status_pengisian', 'bukti': 'path_bukti_bayar',
-        'created_bukti': 'tanggal_upload_bukti'
+        'created_at': 'created_at', 'created_bukti': 'tanggal_upload_bukti'
     }
 
     # Normalisasi Pekerjaan
@@ -765,10 +798,6 @@ if 'siswa' in raw_data:
     df_final['pekerjaan_ibu'] = 'Lainnya'
     df_final['deleted_at'] = None
     
-    # Ensure created_at is present
-    if 'created_at' not in df_final.columns:
-        df_final['created_at'] = None
-        
     # Fill empty/NULL target columns with defaults
     cols_to_dash = [
         'nama_lengkap', 'nama_panggilan', 'email',
@@ -811,7 +840,6 @@ if 'siswa' in raw_data:
         'id_siswa_baru': df.index + 1
     })
     df_mapping['id_siswa_baru'] = df_mapping['id_siswa_baru'].astype('Int64')
-    # Save to the current working directory of the notebook execution (which is already 'fase_4')
     pd.to_pickle(df_mapping, 'mapping_siswa.pkl')
     transformed_dfs['mapping_siswa'] = df_mapping
 
@@ -881,7 +909,7 @@ else:
 if 'siswa_keluar' in raw_data:
     df = pd.DataFrame(raw_data['siswa_keluar'])
     mapping = {
-        'id_keluar': 'id_keluar', 'id_siswa': 'id_siswa', 'id_kursus': 'id_kursus',
+        'id_siswa': 'id_siswa', 'id_kursus': 'id_kursus',
         'alasan_keluar': 'alasan_keluar', 'tanggal_keluar': 'tanggal_keluar', 'id_tag_keluar': 'id_tag_keluar'
     }
     if not df.empty:
@@ -915,7 +943,6 @@ if 'siswa_keluar' in raw_data:
 
         # ponytail: map id_siswa using student_id_map based on auto-increment IDs
         df['id_siswa'] = df['idsiswa'].map(student_id_map).astype('Int64')
-        df['id_keluar'] = df['idsiswa_keluar'].apply(extract_int).astype('Int64')
         df['id_kursus'] = df['id_siswa'].map(student_to_course_map)
         df['id_tag_keluar'] = df.apply(detect_tag, axis=1).astype('Int64')
         df['tanggal_keluar'] = df['tanggal'].apply(lambda x: parse_date_f4(x) or pd.to_datetime('1970-01-01').date())
@@ -962,7 +989,7 @@ if 'mitra' in raw_data:
         df[col] = df[col].apply(convert_ya_tidak)
 
     mapping = {
-        'id_mitra_new': 'id_mitra', 'nama': 'nama_mitra', 'instansi': 'nama_instansi',
+        'nama': 'nama_mitra', 'instansi': 'nama_instansi',
         'namasekolah': 'nama_sekolah', 'lokasi': 'alamat_mitra', 'kepsek': 'nama_pimpinan',
         'cp': 'kontak_mitra', 'status': 'status_mitra', 'visimisi': 'visi_misi',
         'program': 'program_mitra', 'sdm': 'info_sdm', 'weakness': 'info_kelemahan',
@@ -992,27 +1019,26 @@ if 'mitra' in raw_data:
 
     transformed_dfs['mitra'] = df_mitra
 
+    # ponytail: build and save mitra ID mapping (old string/int ID -> new auto-incremented integer ID based on insertion order)
+    df_mapping_mitra = pd.DataFrame({
+        'idmitra_lama': df['idmitra'],
+        'id_mitra_baru': df.index + 1
+    })
+    df_mapping_mitra['id_mitra_baru'] = df_mapping_mitra['id_mitra_baru'].astype('Int64')
+    pd.to_pickle(df_mapping_mitra, 'mapping_mitra.pkl')
+    transformed_dfs['mapping_mitra'] = df_mapping_mitra
+
 # 5. mitra_note -> mitra_progres
 if 'mitra_note' in raw_data:
     df = pd.DataFrame(raw_data['mitra_note'])
     mapping = {
-        'id_progres_mitra': 'id_progres_mitra', 'id_mitra': 'id_mitra',
+        'id_mitra': 'id_mitra',
         'catatan_progres_mitra': 'catatan_progres_mitra', 'id_user': 'id_user', 'status_progres_mitra': 'status_progres_mitra',
         'kemitraan_mulai': 'kemitraan_mulai', 'kemitraan_berakhir': 'kemitraan_berakhir', 'created_at': 'created_at'
     }
     if not df.empty:
-        # ponytail: use our generated kode map, not extract_chars — bypass old letter-stripping discrepancies
-        old_id_to_kode = dict(zip(df_mitra['id_mitra'].astype(str), transformed_dfs['mitra']['kode_mitra']))
-        # Rebuild: map original idmitra -> new kode_mitra using the df we built above
-        # df still has idmitra column (before rename), but df_mitra is already renamed. Use the raw df from mitra block.
-        # ponytail: re-read from db_new since mitra is already inserted at this point
-        cursor_new.execute("SELECT id_mitra, kode_mitra FROM mitra")
-        _mitra_rows = cursor_new.fetchall()
-        _mitra_map = {row['kode_mitra']: int(row['id_mitra']) for row in _mitra_rows}
-        # Map: old idmitra -> new kode -> new id_mitra
-        _old_kode_map = dict(zip([str(extract_int(x)) for x in pd.DataFrame(raw_data['mitra'])['idmitra']], transformed_dfs['mitra']['kode_mitra']))
-        df['id_mitra'] = df['idmitra'].apply(lambda x: _mitra_map.get(_old_kode_map.get(str(extract_int(x)), ''), pd.NA)).astype('Int64')
-        df['id_progres_mitra'] = df['idmnote'].apply(extract_int).astype('Int64')
+        # ponytail: map using the dynamic in-memory mitra_id_map (completely offline and robust!)
+        df['id_mitra'] = df['idmitra'].map(mitra_id_map).astype('Int64')
         df['catatan_progres_mitra'] = df['note']
         df['id_user'] = df['idusers']
         
@@ -1040,20 +1066,29 @@ if 'mitra_note' in raw_data:
             axis=1
         )
         transformed_dfs['mitra_progres'] = df[list(mapping.values())]
+        
+        # ponytail: build and save mitra_progres ID mapping
+        mitra_progres_id_map = dict(zip(df['idmnote'], df.index + 1))
+        df_mapping_mp = pd.DataFrame({
+            'idmnote_lama': df['idmnote'],
+            'id_progres_mitra_baru': df.index + 1
+        })
+        df_mapping_mp['id_progres_mitra_baru'] = df_mapping_mp['id_progres_mitra_baru'].astype('Int64')
+        pd.to_pickle(df_mapping_mp, 'mapping_mitra_progres.pkl')
+        transformed_dfs['mapping_mitra_progres'] = df_mapping_mp
     else:
         transformed_dfs['mitra_progres'] = pd.DataFrame(columns=list(mapping.values()))
+        mitra_progres_id_map = {}
 
 # 6. mitra_users -> kemitraan_verifikator
 if 'mitra_users' in raw_data:
     df = pd.DataFrame(raw_data['mitra_users'])
     mapping = {
-        'id_kemitraan': 'id_kemitraan', 'id_progres_mitra': 'id_progres_mitra', 'id_user': 'id_user'
+        'id_progres_mitra': 'id_progres_mitra', 'id_user': 'id_user'
     }
     if not df.empty:
-        df['id_kemitraan_clean'] = df['idmusers'].apply(extract_int).astype('Int64')
-        df['id_progres_mitra_clean'] = df['idmnote'].apply(extract_int).astype('Int64')
-        df['id_kemitraan'] = df['id_kemitraan_clean']
-        df['id_progres_mitra'] = df['id_progres_mitra_clean']
+        # ponytail: map id_progres_mitra using the dynamic in-memory map
+        df['id_progres_mitra'] = df['idmnote'].map(mitra_progres_id_map).astype('Int64')
         df['id_user'] = df['idusers']
         transformed_dfs['kemitraan_verifikator'] = df[list(mapping.values())]
     else:
@@ -1063,7 +1098,7 @@ if 'mitra_users' in raw_data:
 if 'siswamitra' in raw_data:
     df = pd.DataFrame(raw_data['siswamitra'])
     mapping = {
-        'id_sm': 'id_sm', 'tanggal_daftar': 'tanggal_daftar', 'alamat_domisili': 'alamat_domisili',
+        'tanggal_daftar': 'tanggal_daftar', 'alamat_domisili': 'alamat_domisili',
         'nama_lengkap': 'nama_lengkap', 'nama_panggilan': 'nama_panggilan', 'jenis_kelamin': 'jenis_kelamin',
         'nama_instansi': 'nama_instansi', 'tingkat_sekolah': 'tingkat_sekolah',
         'pekerjaan_sm': 'pekerjaan_sm', 'tempat_lahir': 'tempat_lahir', 'tanggal_lahir': 'tanggal_lahir',
@@ -1072,8 +1107,6 @@ if 'siswamitra' in raw_data:
     }
     if not df.empty:
         df['id_sm_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
-        df['id_mitra_clean'] = df['idmitra'].apply(extract_int).astype('Int64')
-        df['id_sm'] = df['id_sm_clean']
         df['tanggal_daftar'] = df['tgl_daftar']
         df['alamat_domisili'] = df['domisili']
         df['nama_panggilan'] = df['panggilan']
@@ -1085,25 +1118,35 @@ if 'siswamitra' in raw_data:
         df['email_sm'] = df['email']
         df['wa_sm'] = df['tlp']
         df['status_keluar_sm'] = df['keluar']
-        df['id_mitra'] = df['id_mitra_clean']
+        # ponytail: map id_mitra using the dynamic in-memory map
+        df['id_mitra'] = df['idmitra'].map(mitra_id_map).astype('Int64')
         df_final = df.rename(columns=mapping)
         df_final['sertifikat_sm'] = None
         transformed_dfs['siswa_mitra'] = df_final[list(mapping.values()) + ['sertifikat_sm']]
+        
+        # ponytail: build and save siswa_mitra ID mapping
+        siswa_mitra_id_map = dict(zip(df['idsiswa'], df.index + 1))
+        df_mapping_sm = pd.DataFrame({
+            'idsiswa_lama_sm': df['idsiswa'],
+            'id_sm_baru': df.index + 1
+        })
+        df_mapping_sm['id_sm_baru'] = df_mapping_sm['id_sm_baru'].astype('Int64')
+        pd.to_pickle(df_mapping_sm, 'mapping_siswa_mitra.pkl')
+        transformed_dfs['mapping_siswa_mitra'] = df_mapping_sm
     else:
         transformed_dfs['siswa_mitra'] = pd.DataFrame(columns=list(mapping.values()) + ['sertifikat_sm'])
+        siswa_mitra_id_map = {}
 
 # 8. siswa_keluar_mitra -> siswa_mitra_keluar
 if 'siswa_keluar_mitra' in raw_data:
     df = pd.DataFrame(raw_data['siswa_keluar_mitra'])
     mapping = {
-        'id_sm_keluar': 'id_sm_keluar', 'id_sm': 'id_sm',
+        'id_sm': 'id_sm',
         'alasan_keluar_sm': 'alasan_keluar_sm', 'tanggal_keluar_sm': 'tanggal_keluar_sm'
     }
     if not df.empty:
-        df['id_sm_keluar_clean'] = df['idsiswa_keluar'].apply(extract_int).astype('Int64')
-        df['id_sm_clean'] = df['idsiswa'].apply(extract_int).astype('Int64')
-        df['id_sm_keluar'] = df['id_sm_keluar_clean']
-        df['id_sm'] = df['id_sm_clean']
+        # ponytail: map id_sm using the dynamic in-memory map
+        df['id_sm'] = df['idsiswa'].map(siswa_mitra_id_map).astype('Int64')
         df['alasan_keluar_sm'] = df['alasan']
         df['tanggal_keluar_sm'] = df['tanggal']
         transformed_dfs['siswa_mitra_keluar'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
@@ -1147,6 +1190,14 @@ print(f"✓ Transformasi {len(transformed_dfs)} tabel Fase 4 selesai.")"""
                 break
 
     if patched:
+        # Patch verification cell to avoid KeyError on removed PK id_mitra
+        for cell in nb["cells"]:
+            if cell["cell_type"] == "code" and "# 3.1.2 Output Pengecekan Kolom Spesifik" in "".join(cell["source"]):
+                source = "".join(cell["source"])
+                source = source.replace("transformed_dfs['mitra'][['nama_mitra', 'id_mitra',", "transformed_dfs['mitra'][['nama_mitra', 'nama_instansi',")
+                cell["source"] = [line + "\n" for line in source.split("\n")]
+                if cell["source"] and cell["source"][-1] == "\n":
+                    cell["source"].pop()
         ensure_csv_export_cell(nb)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(nb, f, indent=1)
@@ -1191,7 +1242,15 @@ if 'rapor' in raw_data:
     df = df.reset_index()
     df['id_rapor_siswa_new'] = df['index'] + 1
     rapor_id_map = dict(zip(df['idrapor'], df['id_rapor_siswa_new']))
-    df['id_rapor_siswa'] = df['id_rapor_siswa_new']
+    
+    # ponytail: build and save rapor_siswa ID mapping
+    df_mapping_rs = pd.DataFrame({
+        'idrapor_lama': df['idrapor'],
+        'id_rapor_siswa_baru': df['id_rapor_siswa_new']
+    })
+    df_mapping_rs['id_rapor_siswa_baru'] = df_mapping_rs['id_rapor_siswa_baru'].astype('Int64')
+    pd.to_pickle(df_mapping_rs, 'mapping_rapor_siswa.pkl')
+    transformed_dfs['mapping_rapor_siswa'] = df_mapping_rs
     
     # ponytail: map id_siswa using the loaded student ID mapping based on auto-increment IDs
     df['id_siswa_clean'] = df['idsiswa'].apply(map_student_id).astype('Int64')
@@ -1209,7 +1268,7 @@ if 'rapor' in raw_data:
     df['id_parameter_nilai'] = df['idp_nilai'].map(param_map).astype('Int64')
     
     mapping = {
-        'id_rapor_siswa': 'id_rapor_siswa', 'id_jadwal_clean': 'id_jadwal', 'id_siswa_clean': 'id_siswa',
+        'id_jadwal_clean': 'id_jadwal', 'id_siswa_clean': 'id_siswa',
         'tanggal': 'tanggal_input', 'id_parameter_nilai': 'id_parameter_nilai', 'nilai': 'final_result'
     }
     transformed_dfs['rapor_siswa'] = df.rename(columns=mapping)[list(mapping.values())]
@@ -1222,7 +1281,15 @@ if 'file_rapor_siswa' in raw_data and 'rapor_siswa' in transformed_dfs:
     df = df.reset_index()
     df['id_rapor_siswa_file_new'] = df['index'] + 1
     file_id_map = dict(zip(df['idfile'], df['id_rapor_siswa_file_new']))
-    df['id_rapor_siswa_file'] = df['id_rapor_siswa_file_new']
+    
+    # ponytail: build and save rapor_siswa_file ID mapping
+    df_mapping_rsf = pd.DataFrame({
+        'idfile_lama': df['idfile'],
+        'id_rapor_siswa_file_baru': df['id_rapor_siswa_file_new']
+    })
+    df_mapping_rsf['id_rapor_siswa_file_baru'] = df_mapping_rsf['id_rapor_siswa_file_baru'].astype('Int64')
+    pd.to_pickle(df_mapping_rsf, 'mapping_rapor_siswa_file.pkl')
+    transformed_dfs['mapping_rapor_siswa_file'] = df_mapping_rsf
     
     # Fetch old idrapor string and map it to new id_rapor_siswa integer
     df_rapor_old = pd.DataFrame(raw_data['rapor'])[['idsiswa', 'idjadwal', 'idrapor']].drop_duplicates(subset=['idsiswa', 'idjadwal'])
@@ -1230,7 +1297,7 @@ if 'file_rapor_siswa' in raw_data and 'rapor_siswa' in transformed_dfs:
     df['id_rapor_siswa'] = df['idrapor'].map(rapor_id_map).astype('Int64')
     
     mapping = {
-        'id_rapor_siswa_file': 'id_rapor_siswa_file', 'id_rapor_siswa': 'id_rapor_siswa', 'path': 'file_rapor_path'
+        'id_rapor_siswa': 'id_rapor_siswa', 'path': 'file_rapor_path'
     }
     transformed_dfs['rapor_siswa_file'] = df.rename(columns=mapping).reindex(columns=list(mapping.values()))
 
@@ -1248,10 +1315,9 @@ if 'history_rapor' in raw_data and 'rapor_siswa_file' in transformed_dfs:
     
     df_merged = df.merge(df_file_old[['idsiswa', 'idjadwal', 'id_rapor_siswa_file']], on=['idsiswa', 'idjadwal'], how='left')
     df_merged['id_rapor_siswa_file'] = df_merged['id_rapor_siswa_file'].astype('Int64')
-    df_merged['id_rapor_lacak'] = df_merged['idhistori'].apply(extract_int).astype('Int64')
     
     mapping = {
-        'id_rapor_lacak': 'id_rapor_lacak', 'id_siswa_clean': 'id_siswa',
+        'id_siswa_clean': 'id_siswa',
         'id_jadwal_clean': 'id_jadwal', 'tgl': 'tanggal_terkirim', 'status': 'status_pengiriman'
     }
     transformed_dfs['rapor_lacak'] = df_merged.rename(columns=mapping)[list(mapping.values()) + ['id_rapor_siswa_file']]
@@ -1293,6 +1359,14 @@ print(f"OK: Transformasi {len(transformed_dfs)} tabel Fase 5 selesai.")"""
                 break
 
     if patched:
+        # Patch verification cell to avoid KeyError on removed PK id_rapor_siswa
+        for cell in nb["cells"]:
+            if cell["cell_type"] == "code" and "# 3.1.2 Output Pengecekan Kolom Spesifik" in "".join(cell["source"]):
+                source = "".join(cell["source"])
+                source = source.replace("transformed_dfs['rapor_siswa'][['id_rapor_siswa',", "transformed_dfs['rapor_siswa'][['id_siswa',")
+                cell["source"] = [line + "\n" for line in source.split("\n")]
+                if cell["source"] and cell["source"][-1] == "\n":
+                    cell["source"].pop()
         ensure_csv_export_cell(nb)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(nb, f, indent=1)
@@ -1403,7 +1477,7 @@ def patch_fase_5_rapor_urutan():
     )
 
     new_block_2 = (
-        "# 2. format_rapor_detil -> rapor_format_sub (+ urutan dari import CSV)\n"
+        "# 2. format_rapor_detil_rumus -> rapor_format_sub (+ urutan dari import CSV)\n"
         "if 'format_rapor_detil' in raw_data:\n"
         "    df = pd.DataFrame(raw_data['format_rapor_detil'])\n"
         "    mapping = {\n"
@@ -1424,6 +1498,82 @@ def patch_fase_5_rapor_urutan():
         "    transformed_dfs['rapor_format_sub'] = df_rfs\n"
     )
 
+    old_block_3 = (
+        "# 3. format_rapor_rumus -> rapor_format_formula\n"
+        "if 'format_rapor_rumus' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor_rumus'])\n"
+        "    mapping = {\n"
+        "        'idfrr': 'id_rapor_format_formula',\n"
+        "        'idformat_rapor': 'id_rapor_format', 'param_operator': 'logika_operator'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_format_formula'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    new_block_3 = (
+        "# 3. format_rapor_rumus -> rapor_format_formula\n"
+        "if 'format_rapor_rumus' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor_rumus'])\n"
+        "    mapping = {\n"
+        "        'idformat_rapor': 'id_rapor_format', 'param_operator': 'logika_operator'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_format_formula'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    old_block_4 = (
+        "# 4. format_rapor_detil_rumus -> rapor_format_formula_sub\n"
+        "if 'format_rapor_detil_rumus' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor_detil_rumus'])\n"
+        "    mapping = {\n"
+        "        'idfrdr': 'id_rapor_format_formula_sub',\n"
+        "        'idformat_rd': 'id_rapor_format_sub', 'param_operator': 'logika_operator',\n"
+        "        'idlevel': 'id_level'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_format_formula_sub'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    new_block_4 = (
+        "# 4. format_rapor_detil_rumus -> rapor_format_formula_sub\n"
+        "if 'format_rapor_detil_rumus' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_rapor_detil_rumus'])\n"
+        "    mapping = {\n"
+        "        'idformat_rd': 'id_rapor_format_sub', 'param_operator': 'logika_operator',\n"
+        "        'idlevel': 'id_level'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_format_formula_sub'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    old_block_5 = (
+        "# 5. format_raport_level -> rapor_level_config\n"
+        "if 'format_raport_level' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_raport_level'])\n"
+        "    mapping = {\n"
+        "        'idformat_rl': 'id_rapor_level_config', 'idlevel': 'id_level',\n"
+        "        'idpendkursus': 'id_kursus', 'idformat_rapor': 'id_rapor_format'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_level_config'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    new_block_5 = (
+        "# 5. format_raport_level -> rapor_level_config\n"
+        "if 'format_raport_level' in raw_data:\n"
+        "    df = pd.DataFrame(raw_data['format_raport_level'])\n"
+        "    mapping = {\n"
+        "        'idlevel': 'id_level',\n"
+        "        'idpendkursus': 'id_kursus', 'idformat_rapor': 'id_rapor_format'\n"
+        "    }\n"
+        "    transformed_dfs['rapor_level_config'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+    )
+
+    old_block_6 = (
+        "# 6. rapor_sub_level (Tabel Baru)\n"
+        "transformed_dfs['rapor_sub_level'] = pd.DataFrame(columns=['id_rapor_sub_level', 'id_rapor_format_sub', 'id_level'])\n"
+    )
+
+    new_block_6 = (
+        "# 6. rapor_sub_level (Tabel Baru)\n"
+        "transformed_dfs['rapor_sub_level'] = pd.DataFrame(columns=['id_rapor_format_sub', 'id_level'])\n"
+    )
+
     patched = False
     for cell in nb["cells"]:
         if cell["cell_type"] == "code" and MATCH_KEY in "".join(cell["source"]):
@@ -1432,6 +1582,14 @@ def patch_fase_5_rapor_urutan():
                 source = source.replace(old_block_1, new_block_1)
             if old_block_2 in source:
                 source = source.replace(old_block_2, new_block_2)
+            if old_block_3 in source:
+                source = source.replace(old_block_3, new_block_3)
+            if old_block_4 in source:
+                source = source.replace(old_block_4, new_block_4)
+            if old_block_5 in source:
+                source = source.replace(old_block_5, new_block_5)
+            if old_block_6 in source:
+                source = source.replace(old_block_6, new_block_6)
             cell["source"] = [line + "\n" for line in source.split("\n")]
             if cell["source"] and cell["source"][-1] == "\n":
                 cell["source"].pop()
@@ -1442,7 +1600,7 @@ def patch_fase_5_rapor_urutan():
         ensure_csv_export_cell(nb)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(nb, f, indent=1)
-        print("OK: patch_fase_5_rapor_urutan - rapor_format & rapor_format_sub updated with urutan column.")
+        print("OK: patch_fase_5_rapor_urutan - rapor_format, rapor_format_sub, formulas, and levels updated.")
     else:
         print("Error: target cell not found in patch_fase_5_rapor_urutan. Sudah di-patch sebelumnya atau cell marker berubah.")
         print("  Hint: cari sel dengan marker:", repr(MATCH_KEY))
