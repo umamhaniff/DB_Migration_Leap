@@ -507,3 +507,51 @@ Guna menyelaraskan pembagian kerja terbaru di dalam tim, tanggung jawab pengelol
 
 Kedua notebook telah dijalankan ulang secara berurutan dan terbukti berjalan dengan sukses 100% tanpa ada kesalahan.
 
+---
+
+### 🟢 Update 25 Juni 2026 (Siang): Audit Menyeluruh & Eksekusi Sukses Fase 1 - 5
+
+Telah dilakukan eksekusi ulang secara menyeluruh terhadap kelima notebook Jupyter Hanif (`fase_1` sampai `fase_5`) secara berurutan dan dilakukan audit kualitas data pada berkas output Pickle (`.pkl`) dan CSV (`.csv`).
+
+#### 1. Sinkronisasi Jumlah Baris (Pickle vs CSV)
+Seluruh data hasil transformasi pada berkas Pickle kini **100% sinkron** dengan berkas CSV di folder `extract/cek_csv/`:
+
+| Fase | Nama Tabel | Jumlah Baris (Pickle) | Jumlah Baris (CSV) | Status |
+| :--- | :--- | :---: | :---: | :---: |
+| **Fase 1** | `busdev_bidang` | 4 | 4 | **✓ Sinkron** |
+| | `syarat_resign` | 1 | 1 | **✓ Sinkron** |
+| | `ttd` | 1 | 1 | **✓ Sinkron** |
+| | `tag_siswa_keluar` | 11 | 11 | **✓ Sinkron** |
+| **Fase 2** | `division_user` | 6 | 6 | **✓ Sinkron** |
+| | `model_has_roles` | 0 | 0 | **✓ Sinkron** |
+| | `model_has_permissions` | 0 | 0 | **✓ Sinkron** |
+| **Fase 3** | `pengajuan_karyawan` | 33 | 33 | **✓ Sinkron** |
+| | `histori_pengajuan` | 79 | 79 | **✓ Sinkron** |
+| | `pelamar` | 192 | 192 | **✓ Sinkron** |
+| | `pelamar_kerja` | 67 | 67 | **✓ Sinkron** |
+| | `pelamar_sekolah` | 53 | 53 | **✓ Sinkron** |
+| | `pelamar_kursus` | 50 | 50 | **✓ Sinkron** |
+| | `progres_pelamar` | 403 | 403 | **✓ Sinkron** |
+| | `rekrutmen_pelamar` | 281 | 281 | **✓ Sinkron** |
+| **Fase 4** | `siswa` | 1.469 | 1.469 | **✓ Sinkron** |
+| | `kursus_siswa` | 1.769 | 1.769 | **✓ Sinkron** |
+| | `siswa_keluar` | 556 | 556 | **✓ Sinkron** |
+| | `mitra` | 22 | 22 | **✓ Sinkron** |
+| | `mitra_progres` | 296 | 296 | **✓ Sinkron** |
+| | `kemitraan_verifikator` | 228 | 228 | **✓ Sinkron** |
+| **Fase 5** | `rapor_format` | 41 | 41 | **✓ Sinkron** |
+| | `rapor_format_sub` | 121 | 121 | **✓ Sinkron** |
+| | `rapor_format_formula` | 3 | 3 | **✓ Sinkron** |
+| | `rapor_format_formula_sub` | 1.625 | 1.625 | **✓ Sinkron** |
+| | `rapor_level_config` | 340 | 340 | **✓ Sinkron** |
+| | `rapor_siswa` | 22.837 | 22.837 | **✓ Sinkron** |
+| | `rapor_siswa_file` | 1.499 | 1.499 | **✓ Sinkron** |
+| | `rapor_lacak` | 1.366 | 1.366 | **✓ Sinkron** |
+
+#### 2. Hasil Audit Kualitas Data & Keamanan Skema
+* **`rekrutmen_pelamar.id_pelamar` (12 Nulls)**: Bersifat nullable (`YES` pada target DB schema), sehingga aman untuk disuntikkan dan tidak akan memicu kegagalan constraint.
+* **`rapor_siswa.final_result` (1 Test Comment)**: Komentar uji coba `'cobak ubah cobak ubah...'` berukuran sangat pendek (~60 karakter) dan aman berada di bawah limit `VARCHAR(255)`. Tidak ada komentar yang melebihi batas panjang kolom.
+* **Format Penulisan ID/FK**: Bersih dari format desimal `.0` (menggunakan Pandas `Int64` nullable integer), dan nilai kosong dirender sebagai string kosong murni `""` pada berkas CSV.
+
+Seluruh data migrasi Hanif telah siap 100% untuk di-insert ke database target.
+

@@ -90,3 +90,25 @@ After executing all three notebooks successfully, we will verify the resulting `
 - **Status:** Terselesaikan per 24 Juni 2026.
 - **Root Cause:** 1 baris `kursus_siswa` merujuk ke `K00017` yang di-filter Afrida dari tabel `kursus` db_new. K00008 juga tidak ada sejak awal, namun tidak muncul di data `kursus_siswa`.
 - **Solusi:** Drop 1 baris orphan `K00017` dari `df_ks_raw` setelah deduplication di `patch_fase_4()`. Total baris turun dari 1.770 → 1.769.
+
+---
+
+## Update Rencana & Hasil Audit (25 Juni 2026 - Siang)
+
+### 🚨 Eksekusi Akhir & Sinkronisasi Lintas Fase 1 - 5
+* **Masalah**: Berkas ekspor `.csv` pada direktori `extract/cek_csv/` sebelumnya tidak sinkron karena tidak ikut diperbarui ketika beberapa berkas Pickle diperbarui pada sesi sebelumnya.
+* **Solusi**:
+  1. Dibuat skrip otomatisasi `scratch/run_all_notebooks.py` untuk mengeksekusi kelima notebook Jupyter Hanif secara berurutan di dalam *virtual environment*.
+  2. Seluruh notebook berhasil dijalankan ulang secara penuh tanpa galat, menghasilkan berkas `.pkl` dan `.csv` yang sepenuhnya segar (*fresh*) dan terintegrasi secara offline.
+  3. Dibuat skrip audit `scratch/audit_hanif_outputs.py` untuk memverifikasi keselarasan data dan kualitas tipe data/karakter.
+
+### 🛠️ Hasil Audit Data & Verifikasi Lapangan (100% Sukses)
+* **Sinkronisasi Baris**: Berhasil merekonsiliasi jumlah baris antara Pickle dan CSV di folder `extract/cek_csv/`. Seluruh tabel (termasuk `siswa` 1.469 baris, `rapor_siswa` 22.837 baris, dan `rapor_lacak` 1.366 baris) kini sinkron 100%.
+* **Verifikasi Kunci Asing & Tipe Data**:
+  * Seluruh kolom ID/FK menggunakan Pandas `Int64` (integer nullable) untuk membersihkan format desimal `.0` dan menyajikan nilai kosong secara rapi.
+  * Peringatan 12 nilai NULL pada `rekrutmen_pelamar.id_pelamar` telah diverifikasi aman karena kolom target bersifat nullable (`YES` di skema `db_new`).
+  * Komentar uji coba pada `rapor_siswa.final_result` berukuran pendek (~60 karakter) dan aman masuk kolom `VARCHAR(255)`.
+* **Keamanan Pengelolaan**: Pengalihan tabel `roles` (Fase 1) dan `kelurahan` (Fase 2) ke rekan tim berjalan sukses, dengan notebook Hanif bersih dari kode pengolahannya.
+
+Seluruh repositori dalam keadaan bersih (*working tree clean*) dan perubahan terbaru telah didorong (*pushed*) ke repositori utama.
+
