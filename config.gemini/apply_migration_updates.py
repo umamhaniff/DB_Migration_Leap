@@ -1259,6 +1259,8 @@ def extract_int(s):
 import os
 student_id_map = {}
 mapping_path = '../fase_4/mapping_siswa.pkl'
+if not os.path.exists(mapping_path):
+    mapping_path = 'fase_4/mapping_siswa.pkl'
 if os.path.exists(mapping_path):
     df_map = pd.read_pickle(mapping_path)
     student_id_map = dict(zip(df_map['idsiswa_lama'], df_map['id_siswa_baru']))
@@ -1266,9 +1268,29 @@ if os.path.exists(mapping_path):
 def map_student_id(idsiswa_val):
     if pd.isna(idsiswa_val): return None
     val_str = str(idsiswa_val).strip()
-    if val_str in student_id_map:
-        return student_id_map[val_str]
-    return extract_int(val_str)
+    return student_id_map.get(val_str, None)
+
+# ponytail: load schedule ID auto-increment mapping from Fase 4
+schedule_id_map = {}
+sched_mapping_path = '../fase_4/mapping_id_jadwal.pkl'
+if not os.path.exists(sched_mapping_path):
+    sched_mapping_path = 'fase_4/mapping_id_jadwal.pkl'
+if os.path.exists(sched_mapping_path):
+    schedule_id_map = pd.read_pickle(sched_mapping_path)
+
+def map_schedule_id(idjadwal_val):
+    if pd.isna(idjadwal_val): return None
+    val_str = str(idjadwal_val).strip()
+    return schedule_id_map.get(val_str, None)
+
+# ponytail: clean placeholder comments (Category A) and preserve genuine ones (Category B)
+def clean_nilai_comment(val):
+    if pd.isna(val): return ""
+    val_str = str(val).strip()
+    garbage_keywords = ['comment', 'coba ini', 'long comment', 'test', 'dummy', 'qwerty', 'asdf']
+    if any(kw in val_str.lower() for kw in garbage_keywords):
+        return ""
+    return val_str
 
 # 7. rapor -> rapor_siswa
 if 'rapor' in raw_data:
@@ -1288,9 +1310,12 @@ if 'rapor' in raw_data:
     pd.to_pickle(df_mapping_rs, 'mapping_rapor_siswa.pkl')
     transformed_dfs['mapping_rapor_siswa'] = df_mapping_rs
     
-    # ponytail: map id_siswa using the loaded student ID mapping based on auto-increment IDs
+    # ponytail: map id_siswa and id_jadwal using the loaded mappings
     df['id_siswa_clean'] = df['idsiswa'].apply(map_student_id).astype('Int64')
-    df['id_jadwal_clean'] = df['idjadwal'].apply(extract_int).astype('Int64')
+    df['id_jadwal_clean'] = df['idjadwal'].apply(map_schedule_id).astype('Int64')
+    
+    # ponytail: clean placeholder comments (Category A) and keep Category B intact (to be VARCHAR(255))
+    df['nilai_clean'] = df['nilai'].apply(clean_nilai_comment)
     
     # Map idp_nilai string (e.g. 'P00745') to new parameter_nilai auto-increment ID
     cursor_old.execute("SELECT idp_nilai FROM parameter_nilai ORDER BY idp_nilai")
@@ -1305,7 +1330,7 @@ if 'rapor' in raw_data:
     
     mapping = {
         'id_jadwal_clean': 'id_jadwal', 'id_siswa_clean': 'id_siswa',
-        'tanggal': 'tanggal_input', 'id_parameter_nilai': 'id_parameter_nilai', 'nilai': 'final_result'
+        'tanggal': 'tanggal_input', 'id_parameter_nilai': 'id_parameter_nilai', 'nilai_clean': 'final_result'
     }
     transformed_dfs['rapor_siswa'] = df.rename(columns=mapping)[list(mapping.values())]
 
@@ -1345,9 +1370,9 @@ if 'history_rapor' in raw_data and 'rapor_siswa_file' in transformed_dfs:
     df_file_old = pd.DataFrame(raw_data['file_rapor_siswa'])[['idfile', 'idsiswa', 'idjadwal']]
     df_file_old['id_rapor_siswa_file'] = df_file_old['idfile'].map(file_id_map).astype('Int64')
     
-    # ponytail: map id_siswa using the loaded student ID mapping based on auto-increment IDs
+    # ponytail: map id_siswa and id_jadwal using the loaded mappings
     df['id_siswa_clean'] = df['idsiswa'].apply(map_student_id).astype('Int64')
-    df['id_jadwal_clean'] = df['idjadwal'].apply(extract_int).astype('Int64')
+    df['id_jadwal_clean'] = df['idjadwal'].apply(map_schedule_id).astype('Int64')
     
     df_merged = df.merge(df_file_old[['idsiswa', 'idjadwal', 'id_rapor_siswa_file']], on=['idsiswa', 'idjadwal'], how='left')
     df_merged['id_rapor_siswa_file'] = df_merged['id_rapor_siswa_file'].astype('Int64')
@@ -1461,12 +1486,6 @@ def patch_fase_5_rapor_urutan():
     Tambah kolom `urutan` ke transform rapor_format (block #1) dan
     rapor_format_sub (block #2) di fase_5/script_hanif.ipynb.
 
-    Strategi:
-    - rapor_format  : merge LEFT ke rapor_format_import.csv via kolom `judul_rapor`
-    - rapor_format_sub : merge LEFT ke rapor_format_sub_import.csv via
-      `sub_judul_rapor` + `id_rapor_format` (F00001 -> digit int, matched
-      terhadap id_rapor_format numerik dari old DB)
-
     Jalankan notebook dari direktori fase_5/ agar path CSV relatif valid.
     """
     path = "fase_5/script_hanif.ipynb"
@@ -1494,10 +1513,16 @@ def patch_fase_5_rapor_urutan():
         "        'idpendkursus': 'id_kursus', 'title': 'judul_rapor'\n"
         "    }\n"
         "    df_rf = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # ponytail: query valid courses from the new database to handle deleted courses\n"
+        "    cursor_new.execute(\"SELECT id_kursus FROM kursus\")\n"
+        "    valid_courses = {row['id_kursus'] for row in cursor_new.fetchall() if row['id_kursus']}\n"
+        "    # Since id_kursus is NOT NULL in the target database and cannot be null, we must filter out the rows belonging to course 'K00017' (which was deleted)\n"
+        "    df_rf = df_rf[df_rf['id_kursus'].isin(valid_courses)]\n"
         "    # Merge kolom urutan dari rapor_format_import.csv (sudah diurutkan manual)\n"
-        "    df_urutan_rf = pd.read_csv('rapor_format_import.csv')[['judul_rapor', 'urutan']]\n"
-        "    df_rf = df_rf.merge(df_urutan_rf, on='judul_rapor', how='left')\n"
-        "    df_rf['urutan'] = df_rf['urutan'].astype('Int64')  # cegah float karena NaN\n"
+        "    # ponytail: merge directly on id_rapor_format to avoid duplicates and Cartesian product!\n"
+        "    df_urutan_rf = pd.read_csv('rapor_format_import.csv')[['id_rapor_format', 'urutan']]\n"
+        "    df_rf = df_rf.merge(df_urutan_rf, on='id_rapor_format', how='left')\n"
+        "    df_rf['urutan'] = df_rf['urutan'].fillna(0).astype('Int64')  # default to 0 if NaN\n"
         "    transformed_dfs['rapor_format'] = df_rf\n"
     )
 
@@ -1521,16 +1546,13 @@ def patch_fase_5_rapor_urutan():
         "        'idformat_rapor': 'id_rapor_format', 'subtitle': 'sub_judul_rapor'\n"
         "    }\n"
         "    df_rfs = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # ponytail: filter out sub-formats where parent format was filtered out due to deleted courses\n"
+        "    df_rfs = df_rfs[df_rfs['id_rapor_format'].isin(transformed_dfs['rapor_format']['id_rapor_format'])]\n"
         "    # Merge kolom urutan dari rapor_format_sub_import.csv (sudah diurutkan manual)\n"
-        "    # id_rapor_format di import CSV: format 'F00001' -> ambil digit -> int untuk join\n"
-        "    df_urutan_rfs = pd.read_csv('rapor_format_sub_import.csv')\n"
-        "    df_urutan_rfs['_rf_key'] = df_urutan_rfs['id_rapor_format'].str.extract(r'(\\d+)', expand=False).astype(int)\n"
-        "    df_urutan_rfs = df_urutan_rfs[['_rf_key', 'sub_judul_rapor', 'urutan']]\n"
-        "    df_rfs = df_rfs.copy()\n"
-        "    df_rfs['_rf_key'] = pd.to_numeric(df_rfs['id_rapor_format'], errors='coerce').astype('Int64')\n"
-        "    df_urutan_rfs['_rf_key'] = df_urutan_rfs['_rf_key'].astype('Int64')\n"
-        "    df_rfs = df_rfs.merge(df_urutan_rfs, on=['_rf_key', 'sub_judul_rapor'], how='left').drop(columns=['_rf_key'])\n"
-        "    df_rfs['urutan'] = df_rfs['urutan'].astype('Int64')  # cegah float karena NaN\n"
+        "    # ponytail: merge directly on id_rapor_format and sub_judul_rapor to avoid complex key conversion bugs!\n"
+        "    df_urutan_rfs = pd.read_csv('rapor_format_sub_import.csv')[['id_rapor_format', 'sub_judul_rapor', 'urutan']]\n"
+        "    df_rfs = df_rfs.merge(df_urutan_rfs, on=['id_rapor_format', 'sub_judul_rapor'], how='left')\n"
+        "    df_rfs['urutan'] = df_rfs['urutan'].fillna(0).astype('Int64')  # default to 0 if NaN\n"
         "    transformed_dfs['rapor_format_sub'] = df_rfs\n"
     )
 
@@ -1552,7 +1574,10 @@ def patch_fase_5_rapor_urutan():
         "    mapping = {\n"
         "        'idformat_rapor': 'id_rapor_format', 'param_operator': 'logika_operator'\n"
         "    }\n"
-        "    transformed_dfs['rapor_format_formula'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    df_rff = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # ponytail: filter out skipped formats\n"
+        "    df_rff = df_rff[df_rff['id_rapor_format'].isin(transformed_dfs['rapor_format']['id_rapor_format'])]\n"
+        "    transformed_dfs['rapor_format_formula'] = df_rff\n"
     )
 
     old_block_4 = (
@@ -1576,6 +1601,10 @@ def patch_fase_5_rapor_urutan():
         "        'idlevel': 'id_level'\n"
         "    }\n"
         "    transformed_dfs['rapor_format_formula_sub'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # ponytail: filter out skipped sub-formats\n"
+        "    transformed_dfs['rapor_format_formula_sub'] = transformed_dfs['rapor_format_formula_sub'][\n"
+        "        transformed_dfs['rapor_format_formula_sub']['id_rapor_format_sub'].isin(transformed_dfs['rapor_format_sub']['id_rapor_format_sub'])\n"
+        "    ]\n"
     )
 
     old_block_5 = (
@@ -1597,7 +1626,13 @@ def patch_fase_5_rapor_urutan():
         "        'idlevel': 'id_level',\n"
         "        'idpendkursus': 'id_kursus', 'idformat_rapor': 'id_rapor_format'\n"
         "    }\n"
-        "    transformed_dfs['rapor_level_config'] = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    df_rlc = df.rename(columns=mapping)[list(mapping.values())]\n"
+        "    # ponytail: filter out skipped formats and deleted courses (K00017)\n"
+        "    df_rlc = df_rlc[\n"
+        "        df_rlc['id_kursus'].isin(valid_courses) &\n"
+        "        df_rlc['id_rapor_format'].isin(transformed_dfs['rapor_format']['id_rapor_format'])\n"
+        "    ]\n"
+        "    transformed_dfs['rapor_level_config'] = df_rlc\n"
     )
 
     old_block_6 = (
@@ -1607,7 +1642,8 @@ def patch_fase_5_rapor_urutan():
 
     new_block_6 = (
         "# 6. rapor_sub_level (Tabel Baru)\n"
-        "transformed_dfs['rapor_sub_level'] = pd.DataFrame(columns=['id_rapor_format_sub', 'id_level'])\n"
+        "    # ponytail: filter out skipped sub-formats\n"
+        "    transformed_dfs['rapor_sub_level'] = pd.DataFrame(columns=['id_rapor_format_sub', 'id_level'])\n"
     )
 
     patched = False
