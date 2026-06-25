@@ -490,3 +490,20 @@ Guna melenyapkan seluruh peringatan (*warnings*) dan kegagalan relasi kunci asin
 
 #### 6. Validasi Mandiri Offline-First
 * Pencocokan ID siswa dan jadwal dialihkan secara mandiri ke berkas pemetaan lokal Fase 4 (`mapping_siswa.pkl` dan `mapping_id_jadwal.pkl`) alih-alih melakukan query langsung ke database target yang kosong, menjamin seluruh data rapor (22.837 baris `rapor_siswa`, 1.499 baris `rapor_siswa_file`, dan 1.366 baris `rapor_lacak`) berhasil diekspor secara utuh secara lokal.
+
+---
+
+### 🟢 Update 25 Juni 2026 (Tahap 2): Pengalihan Pengelolaan Tabel Roles & Kelurahan
+
+Guna menyelaraskan pembagian kerja terbaru di dalam tim, tanggung jawab pengelolaan beberapa tabel master/wilayah telah dialihkan dari Hanif ke anggota tim lainnya:
+
+#### 1. Tabel `roles` (Fase 1)
+* **Status**: 🚫 **DIALIKAN** (Tidak lagi dikelola oleh Hanif).
+* **Solusi**: Kolom pemetaan, pengambilan data skema, dan proses transformasi data `role -> roles` telah dibersihkan sepenuhnya dari notebook `fase_1/script_hanif.ipynb`. Berkas pickle target `fase_1_hanif.pkl` kini dikemas secara bersih tanpa menyertakan tabel `roles` (hanya menyertakan `busdev_bidang`, `syarat_resign`, `ttd`, dan `tag_siswa_keluar`).
+
+#### 2. Tabel `kelurahan` (Fase 2)
+* **Status**: 🚫 **DIALIKAN** (Tidak lagi dikelola oleh Hanif).
+* **Solusi**: Proses transformasi data wilayah `kelurahan` (yang sebelumnya ditangani di Fase 2 notebook) telah dieliminasi dari `fase_2/script_hanif.ipynb`. Berkas pickle target `fase_2_hanif.pkl` kini dihasilkan tanpa menyertakan tabel `kelurahan` (hanya menyertakan `division_user`, `model_has_roles`, dan `model_has_permissions`).
+
+Kedua notebook telah dijalankan ulang secara berurutan dan terbukti berjalan dengan sukses 100% tanpa ada kesalahan.
+

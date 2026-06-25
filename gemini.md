@@ -40,3 +40,6 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
    * Seluruh CSV verifikasi (25 tabel) diekspor secara bersih ke folder `extract/cek_csv/` tanpa imbuhan `_export`.
    * Mengintegrasikan auto-cast tipe data integer nullable Pandas (`Int64`) pada cell ekspor CSV untuk membersihkan format desimal `.0` pada seluruh kolom ID/FK dan merender nilai kosong/NaN menjadi string kosong murni.
    * Laporan detail kendala migrasi yang terselesaikan di-update di `conductor/laporan_kendala_migrasi.md` dan ringkasan catatan di `conductor/catatan.md`.
+5. **Pembaruan Pembagian Kerja (25 Juni 2026)**:
+   * Tabel `roles` di Fase 1 dan tabel `kelurahan` di Fase 2 secara resmi dialihkan pengelolaannya dari Hanif ke anggota tim lain.
+   * Notebook `fase_1/script_hanif.ipynb` dan `fase_2/script_hanif.ipynb` telah diperbarui dan dijalankan kembali secara bersih untuk menghilangkan pemrosesan kedua tabel tersebut. Berkas pickle (`fase_1_hanif.pkl` dan `fase_2_hanif.pkl`) telah diperbarui untuk mengeluarkan tabel tersebut dengan aman.
