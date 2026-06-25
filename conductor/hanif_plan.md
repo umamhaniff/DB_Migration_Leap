@@ -57,6 +57,27 @@ After executing all three notebooks successfully, we will verify the resulting `
 
 ---
 
+## Update Rencana & Penyelesaian Masalah (25 Juni 2026)
+
+### 🚨 Tantangan & Peringatan Baru yang Ditemukan pada Rapor Fase 5:
+1. **Cartesian Product pada `rapor_format`**: Kolom `urutan` digabungkan berdasarkan `judul_rapor` yang mengakibatkan hasil baris membengkak dari 41 baris menjadi 285 baris dan memicu error `Duplicate entry 'F00001' for key 'PRIMARY'` saat insert.
+2. **Column 'urutan' cannot be null di `rapor_format_sub`**: Beberapa sub-format tidak terpetakan dengan benar sehingga memicu kolom `urutan` bernilai null yang ditolak oleh database (karena `NOT NULL`).
+3. **Foreign Key Constraint Fails akibat Course 'K00017' yang Dihapus**:
+   * Format, sub-format, formula, dan konfigurasi level kelas yang merujuk ke kursus `'K00017'` (yang telah dihapus dari database baru) memicu kegagalan relasi kunci asing pada tabel anak (`rapor_format_sub`, `rapor_format_formula_sub`, `rapor_level_config`).
+4. **Data Truncated for column 'final_result' di `rapor_siswa`**: Beberapa komentar guru berkategori A (placeholder/sampah) terlalu panjang dan memicu error pemotongan data pada kolom `final_result`.
+5. **Drift/Pergeseran ID Kunci Asing**: Pemetaan `id_rapor_siswa` dan `id_rapor_siswa_file` mengalami pergeseran antara ID buatan lokal dengan ID auto-increment riil dari MySQL akibat adanya baris-baris yang ter-skip saat proses insert.
+6. **Ketergantungan Eksekusi Lokal pada Database Kosong**: Validasi ID siswa dan jadwal yang langsung melakukan query ke database target lokal yang masih kosong menyebabkan seluruh baris tersaring keluar (0 baris terekspor).
+
+### 🛠️ Langkah Mitigasi & Eksekusi Penyelesaian:
+* [x] **Mitigasi 11: Sinkronisasi Urutan Format Tanpa Duplikasi** — Mengubah penggabungan kolom `urutan` pada `rapor_format` agar langsung menggunakan `id_rapor_format` dan pada `rapor_format_sub` menggunakan `id_rapor_format_sub`. Hal ini sepenuhnya melenyapkan duplikasi Cartesian product (kembali bersih menjadi tepat 41 format dan 121 sub-format).
+* [x] **Mitigasi 12: Penanganan Nilai Default Urutan** — Menerapkan fungsi `.fillna(0).astype('Int64')` untuk menjamin tidak ada nilai null pada kolom `urutan` di `rapor_format_sub`.
+* [x] **Mitigasi 13: Penyaringan Lintas Relasi YAGNI untuk Kursus Terhapus ('K00017')** — Mengeliminasi data kursus `'K00017'` secara lokal menggunakan filter Pandas pada `rapor_format` dan menyaring seluruh tabel anak berdasarkan format induk yang valid. Hal ini menyelesaikan seluruh kegagalan relasi kunci asing (Foreign Key) pada tabel konfigurasi rapor.
+* [x] **Mitigasi 14: Pembersihan Komentar Kategori A & Pemeliharaan Kategori B** — Membersihkan komentar sampah (Kategori A) menjadi string kosong, sementara komentar riil (Kategori B) dipertahankan utuh di bawah batas aman 249 karakter (aman masuk skema `VARCHAR(255)`).
+* [x] **Mitigasi 15: Penomoran ID Bebas Drift (Drift-Free Auto-Increment)** — Melakukan penomoran auto-increment buatan untuk `id_rapor_siswa` dan `id_rapor_siswa_file` **setelah** seluruh proses penyaringan data selesai dilakukan (*post-filtering reset index*). Relasi anak di `rapor_siswa_file` dan `rapor_lacak` kini dijamin sinkron 100% dengan auto-increment riil MySQL.
+* [x] **Mitigasi 16: Validasi Mandiri Offline-First** — Mengalihkan validasi ID siswa dan jadwal menggunakan himpunan data valid dari berkas pemetaan Fase 4 (`mapping_siswa.pkl` dan `mapping_id_jadwal.pkl`) alih-alih melakukan query ke database target yang masih kosong. Notebook kini berhasil dieksekusi 100% secara lokal dan menghasilkan jumlah baris yang lengkap (22.837 baris `rapor_siswa`, 1.499 baris `rapor_siswa_file`, dan 1.366 baris `rapor_lacak`).
+
+---
+
 ## 🗂️ Backlog & Known Issues (24 Juni 2026)
 
 ### ⏸️ SKIP — Kolom `id_calon` pada tabel `siswa`
