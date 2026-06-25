@@ -463,3 +463,30 @@ Guna menyelaraskan data dengan sistem auto-increment di database target (`db_new
 * 1 baris `kursus_siswa` merujuk ke `K00017` yang tidak ada di db_new (di-filter Afrida, Fase 1).
 * K00008 juga tidak ada di db_new sejak awal, namun tidak muncul di data `kursus_siswa`.
 * Solusi: filter `df_ks_raw[df_ks_raw['id_kursus'] != 'K00017']` setelah deduplication.
+
+---
+
+### 🟢 Update 25 Juni 2026: Resolusi Peringatan & Kegagalan Relasi Rapor Fase 5
+
+Guna melenyapkan seluruh peringatan (*warnings*) dan kegagalan relasi kunci asing (*Foreign Key*) pada penyuntikan data rapor, telah diimplementasikan arsitektur pemetaan yang kokoh dan bebas dari pergeseran (*drift*):
+
+#### 1. Deduplikasi Cartesian Product & Sinkronisasi Urutan
+* **Masalah**: Penggabungan kolom `urutan` pada `rapor_format` sebelumnya dilakukan berdasarkan `judul_rapor` yang memicu Cartesian product (membengkak menjadi 285 baris) dan tabrakan kunci utama (*duplicate entry*).
+* **Solusi**: Penggabungan kolom `urutan` kini diselaraskan secara langsung pada kunci unik `id_rapor_format` (untuk `rapor_format`) dan `id_rapor_format_sub` (untuk `rapor_format_sub`) menggunakan data dari berkas CSV urutan manual (`rapor_format_import.csv` dan `rapor_format_sub_import.csv`). Jumlah baris kembali bersih dan akurat (tepat 41 format utama dan 121 sub-format).
+
+#### 2. Proteksi Nilai Urutan Null
+* Kolom `urutan` pada tabel `rapor_format_sub` dijamin aman dari penolakan database (`NOT NULL` violation) dengan menggunakan fungsi `.fillna(0).astype('Int64')` untuk mengisi nilai default `0` jika data urutan manual kosong.
+
+#### 3. Pembersihan Lintas Relasi Kursus Terhapus ('K00017')
+* **Masalah**: Kursus `'K00017'` telah dihapus dari database baru, namun data konfigurasinya masih ada di database lama, sehingga memicu kegagalan relasi kunci asing saat tabel-tabel anak dimasukkan.
+* **Solusi**: Seluruh baris konfigurasi, formula, dan sub-format yang berafiliasi dengan kursus `'K00017'` dieliminasi secara lokal menggunakan filter Pandas pada `rapor_format` dan menyaring seluruh tabel anak (`rapor_format_sub`, `rapor_format_formula_sub`, `rapor_level_config`) secara bertingkat berdasarkan format induk yang valid.
+
+#### 4. Pembersihan Komentar Guru (Category A & B)
+* Komentar guru berkategori A (placeholder seperti *comment*, *test*, *dummy*) pada `rapor_siswa.final_result` dibersihkan menjadi string kosong (`""`), sedangkan komentar berkategori B (riil) dipertahankan utuh di bawah batas panjang 249 karakter (aman masuk skema `VARCHAR(255)` tanpa terpotong).
+
+#### 5. Pemetaan ID Bebas Drift (Drift-Free Auto-Increment)
+* **Masalah**: Pemetaan ID pada tabel anak (`rapor_siswa_file` dan `rapor_lacak`) sebelumnya mengalami pergeseran (*drift*) dengan ID auto-increment riil dari MySQL akibat adanya data yang ter-skip saat proses insert.
+* **Solusi**: Penomoran auto-increment buatan lokal untuk `id_rapor_siswa` dan `id_rapor_siswa_file` dilakukan **setelah** seluruh proses penyaringan data selesai dilakukan (*post-filtering reset index*). Relasi anak di `rapor_siswa_file` dan `rapor_lacak` kini dijamin sinkron 100% dengan auto-increment riil database.
+
+#### 6. Validasi Mandiri Offline-First
+* Pencocokan ID siswa dan jadwal dialihkan secara mandiri ke berkas pemetaan lokal Fase 4 (`mapping_siswa.pkl` dan `mapping_id_jadwal.pkl`) alih-alih melakukan query langsung ke database target yang kosong, menjamin seluruh data rapor (22.837 baris `rapor_siswa`, 1.499 baris `rapor_siswa_file`, dan 1.366 baris `rapor_lacak`) berhasil diekspor secara utuh secara lokal.
