@@ -991,20 +991,23 @@ if 'mitra' in raw_data:
     df['_sort_key'] = pd.to_datetime(df['created_at'], errors='coerce').fillna(pd.to_datetime('2020-01-01'))
     df = df.sort_values(by=['_sort_key', 'idmitra']).reset_index(drop=True)
 
-    # ponytail: build unique kode_mitra from student no_induk alpha prefix, sequential if duplicate
+    # ponytail: build unique kode_mitra using single bulk query to avoid N+1 queries
+    cursor_old.execute("SELECT idmitra, no_induk FROM siswa WHERE no_induk IS NOT NULL AND no_induk != ''")
+    siswa_no_induk = cursor_old.fetchall()
+    mitra_to_prefixes = {}
+    for s in siswa_no_induk:
+        idm = s['idmitra']
+        no_induk = s['no_induk']
+        prefix = re.sub(r'[0-9#/ \t-]', '', no_induk)
+        if prefix:
+            mitra_to_prefixes.setdefault(idm, []).append(prefix)
+
     prefix_count = {}
     new_kodes = []
     for _, row in df.iterrows():
         idmitra = row['idmitra']
-        cursor_old.execute("SELECT no_induk FROM siswa WHERE idmitra = %s AND no_induk IS NOT NULL AND no_induk != ''", (idmitra,))
-        students = cursor_old.fetchall()
-        prefixes = []
-        for s in students:
-            prefix = re.sub(r'[0-9#/ \t-]', '', s['no_induk'])
-            if prefix:
-                prefixes.append(prefix)
-        unique_prefixes = list(set(prefixes))
-        base = unique_prefixes[0] if unique_prefixes else 'M'
+        prefixes = list(set(mitra_to_prefixes.get(idmitra, [])))
+        base = prefixes[0] if prefixes else 'M'
         count = prefix_count.get(base, 0)
         kode = base if count == 0 else f"{base}{count}"
         prefix_count[base] = count + 1
