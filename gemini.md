@@ -14,7 +14,7 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
 2. **Aturan Penting Project (Project Constraints)**:
    * 🛑 **DILARANG MENGUBAH DATA MASTER/WILAYAH DI DB_NEW**: Tabel referensi wilayah (`provinsi`, `kabupaten`, `kecamatan`, `kelurahan`) di `db_new` sudah bersifat final (hasil migrasi Fase 1 & 2). 
    * 🔄 **Hanya Mengubah Foreign Key (FK)**: Selama transformasi data operasional (seperti `siswa` dan `mitra` di Fase 4), kita hanya diperbolehkan mengubah nilai kolom FK (`id_provinsi`, `id_kabupaten`, `etc.`) agar menunjuk ke ID integer auto-increment baru di `db_new`. Pemetaan ini dicapai dengan mencocokkan nama wilayah secara hierarkis (*Clean-Name Hierarchical Matching*).
-   * 🚫 **DILARANG KERAS MENGUBAH `insert_handler.ipynb`** (di semua fase): File ini bukan bagian Hanif — dikelola oleh anggota tim lain. Jangan pernah edit, patch, atau regenerate file `insert_handler.ipynb` manapun, termasuk melalui `apply_migration_updates.py` atau script patching lain.
+   * 🚫 **DILARANG KERAS MENGUBAH `insert_handler.ipynb`** (di semua fase): File ini bukan bagian Hanif — dikelola oleh anggota tim lain. Jangan pernah edit, patch, atau regenerate file `insert_handler.ipynb` manapun, termasuk melalui `apply_migration_updates.py` or script patching lain.
 
 ---
 
@@ -23,7 +23,7 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
 
 ---
 
-## 📈 Perkembangan Terakhir (Per 8 Juni 2026)
+## 📈 Perkembangan Terakhir (Per 29 Juni 2026)
 
 1. **Fase 3 (Selesai)**:
    * Mengubah `id_pelamar` di tabel `pelamar` menjadi integer auto-increment.
@@ -43,3 +43,11 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
 5. **Pembaruan Pembagian Kerja (25 Juni 2026)**:
    * Tabel `roles` di Fase 1 dan tabel `kelurahan` di Fase 2 secara resmi dialihkan pengelolaannya dari Hanif ke anggota tim lain.
    * Notebook `fase_1/script_hanif.ipynb` dan `fase_2/script_hanif.ipynb` telah diperbarui dan dijalankan kembali secara bersih untuk menghilangkan pemrosesan kedua tabel tersebut. Berkas pickle (`fase_1_hanif.pkl` dan `fase_2_hanif.pkl`) telah diperbarui untuk mengeluarkan tabel tersebut dengan aman.
+6. **Optimasi & Penyesuaian Explicit ID (29 Juni 2026)**:
+   * **Fase 4 (Optimasi `kode_mitra`)**: Mengoptimalkan pembuatan `kode_mitra` dengan mengganti loop N+1 query menjadi *single bulk query* ke tabel `siswa`, meningkatkan performa ETL secara signifikan.
+   * **Fase 5 (Explicit ID & PK Exclusion)**: 
+     * Memetakan foreign key di tabel anak secara presisi menggunakan `file_id_map` hasil pemetaan in-memory.
+     * Mengeluarkan kolom Primary Key (`id_rapor_siswa`, `id_rapor_siswa_file`, `id_rapor_lacak`) dari DataFrame di file Pickle agar sesuai dengan spesifikasi insert handler yang mengandalkan `AUTO_INCREMENT` MySQL (lulus uji di `test_migration_pickles.py`).
+   * **Audit Data Cleaning**:
+     * Melakukan pemindaian otomatis terhadap nilai placeholder dan anomali di Fase 3, 4, dan 5. Laporan lengkap ditulis di [laporan_pemeriksaan_cleaning.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/laporan_pemeriksaan_cleaning.md).
+     * Ditemukan 2 anomali riil: Pelamar `64a4ddd6bea4320230705100454` dengan `nomor_wa` = `532453` (terlalu pendek), dan Siswa `S0000009` dengan `email` = `0`. Tindakan pembersihan ditangguhkan menunggu diskusi Hanif dengan PM.
