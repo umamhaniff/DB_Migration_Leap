@@ -9,6 +9,21 @@ Dokumen ini berfungsi khusus sebagai **catatan kronologis perkembangan, rincian 
 
 ## 📈 Jurnal Pembaruan Kronologis
 
+### 🟢 Update 3 Juli 2026: Resolusi Siswa Keluar Hilang & Pembaruan Skema Database Baru
+
+Telah diselesaikan masalah hilangnya 47 data siswa yang berstatus keluar (non-aktif) di database baru melalui penelusuran relasi dan sinkronisasi skema:
+1. **Investigasi & Validasi Data**:
+   * PM melaporkan 47 nama siswa keluar tidak terdaftar di database baru (`db_new`).
+   * Melalui script audit in-memory `scratch/check_siswa_keluar.py`, diverifikasi bahwa seluruh 47 data tersebut **ada di database lama (`db_old.siswa`)** dengan flag status `keluar = 1.0` dan log keluar terdaftar lengkap di `siswa_keluar` lama beserta alasan riil.
+2. **Penyebab & Sinkronisasi Skema**:
+   * Kegagalan migrasi disebabkan database target `dataleap_v5_migration` belum di-patch skema terbarunya. Akibatnya, MySQL menolak insert tabel induk `siswa` karena kolom `status_pendaftaran` (varchar) tidak ada (masih menggunakan skema lama dengan `status_aktif` dan `status_lulus_siswa`).
+   * Sukses menjalankan script patcher [patch_db_schema.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/patch_db_schema.py) untuk memperbarui struktur database target baru secara aman.
+3. **Eksekusi ETL & Pickle**:
+   * Notebook [script_hanif.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_4/script_hanif.ipynb) Fase 4 dijalankan ulang untuk memperbarui file binary pickle `fase_4_hanif.pkl`.
+   * File `fase_4/insert_handler.ipynb` milik rekan tim yang sempat dikonversi/dieksekusi dikembalikan (*discard change*) sepenuhnya ke kondisi asli menggunakan Git agar tetap bersih dan tidak termodifikasi lokal.
+
+---
+
 ### 🟢 Update 25 Juni 2026 (Siang): Audit Menyeluruh & Eksekusi Sukses Fase 1 - 5
 
 Telah dilakukan eksekusi ulang secara menyeluruh terhadap kelima notebook Jupyter Hanif (`fase_1` sampai `fase_5`) secara berurutan di dalam *virtual environment* menggunakan skrip otomatisasi `scratch/run_all_notebooks.py`. Semua notebook selesai dijalankan dengan **sukses 100% (Exit Code: 0)**.
