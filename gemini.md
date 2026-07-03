@@ -57,3 +57,8 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
    * **Fase 4**: Audit menghasilkan [fase4_anomalies_clean.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/fase4_anomalies_clean.md). Mengidentifikasi 1867 data (mayoritas default WA/Tempat Lahir `-`), 19 alasan keluar dummy di `siswa_keluar`, dan 1 *minor note* di `mitra`.
    * **Fase 5**: Audit menghasilkan [fase5_anomalies_clean.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/fase5_anomalies_clean.md). Menemukan 6 path file dummy (`TRIAL01.jpeg`, `coba.jpeg`, etc.) di `rapor_siswa_file`.
    * **Git Untracking**: Menghapus laporan audit dari pemantauan Git (`git rm --cached`) untuk menjaga agar folder `extract/` tetap bersih dan lokal, namun tetap menyimpan skrip pemindai di folder `scratch/`.
+8. **Penyelidikan Siswa Keluar Hilang & DB Schema Patch (3 Juli 2026)**:
+   * **Audit Mismatch Nama**: Menyelidiki 47 nama siswa keluar yang dilaporkan hilang oleh PM. Menemukan bahwa data mereka lengkap di DB Old (`keluar = 1.0` dan log di `siswa_keluar`), namun gagal ter-insert karena database target baru (`dataleap_v5_migration`) belum di-patch skema terbarunya.
+   * **Database Patcher**: Sukses mengeksekusi `config.gemini/patch_db_schema.py` untuk menambahkan kolom `status_pendaftaran` di tabel `siswa`, `status_lulus` di `kursus_siswa`, dan alter kolom lainnya yang dibutuhkan.
+   * **Regenerasi Notebook**: Menjalankan ulang notebook `fase_4/script_hanif.ipynb` untuk memperbarui pickle `fase_4_hanif.pkl` secara bersih dengan status ✅ OK.
+   * **Insert Handler Restoration**: Memulihkan file `fase_4/insert_handler.ipynb` milik teman agar kembali bersih tanpa modifikasi lokal.
