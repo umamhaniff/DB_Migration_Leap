@@ -21,6 +21,9 @@ Telah diselesaikan masalah hilangnya 47 data siswa yang berstatus keluar (non-ak
 3. **Eksekusi ETL & Pickle**:
    * Notebook [script_hanif.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_4/script_hanif.ipynb) Fase 4 dijalankan ulang untuk memperbarui file binary pickle `fase_4_hanif.pkl`.
    * File `fase_4/insert_handler.ipynb` milik rekan tim yang sempat dikonversi/dieksekusi dikembalikan (*discard change*) sepenuhnya ke kondisi asli menggunakan Git agar tetap bersih dan tidak termodifikasi lokal.
+4. **Saran Peningkatan untuk `insert_handler` (Defensive Programming)**:
+   * **Masalah**: `insert_handler` saat ini bertindak sangat *strict* (kaku), di mana ia langsung menyusun query insert mentah-mentah dari kolom Pickle dan memicu crash total saat ada kolom ekstra (seperti `status_pendaftaran`) yang belum ditambahkan di database target.
+   * **Rekomendasi Solusi**: Disarankan agar `insert_handler` menerapkan *Dynamic Column Filtering* sebelum melakukan insert. Handler sebaiknya melakukan query `DESCRIBE table_name` terlebih dahulu pada database target baru, lalu memfilter Pandas DataFrame secara in-memory agar hanya meng-insert kolom yang terdaftar di database baru. Ini membuat program migrasi menjadi robust dan kebal crash dari perubahan minor struktur kolom.
 
 ---
 
