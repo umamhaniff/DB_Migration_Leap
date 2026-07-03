@@ -9,7 +9,19 @@ Dokumen ini berfungsi khusus sebagai **catatan kronologis perkembangan, rincian 
 
 ## 📈 Jurnal Pembaruan Kronologis
 
-### 🟢 Update 3 Juli 2026: Resolusi Siswa Keluar Hilang & Pembaruan Skema Database Baru
+### 🟢 Update 3 Juli 2026 (Sore): Eksekusi Ulang Sukses Fase 3 - 5 & Audit Kepatuhan Data
+
+Telah dilakukan eksekusi ulang secara menyeluruh terhadap notebook Jupyter Fase 3 hingga Fase 5 dan validasi kualitas data secara independen:
+1. **Eksekusi Notebook**: Notebook [script_hanif.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_3/script_hanif.ipynb) (Fase 3), [script_hanif.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_4/script_hanif.ipynb) (Fase 4), dan [script_hanif.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_5/script_hanif.ipynb) (Fase 5) berhasil dijalankan secara berurutan tanpa error (Exit Code: 0).
+2. **Validasi Binary Pickle**: Seluruh binary pickle hasil pemrosesan (`fase_3_hanif.pkl`, `fase_4_hanif.pkl`, `fase_5_hanif.pkl`) lulus uji validasi struktur dan data menggunakan [test_migration_pickles.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/test_migration_pickles.py) dengan status **Passed**.
+3. **Temuan Audit & Kualitas Data (Tanpa Modifikasi)**:
+   * **Fase 3 (`rekrutmen_pelamar`)**: Ditemukan **12 baris** dengan `id_pelamar = NULL` (`<NA>`). Setelah diaudit pada `db_old.pelamar_users`, hal ini disebabkan karena data asal tidak konsisten (4 baris memiliki `idpelamar` kosong `''` dan 8 baris memiliki `idpelamar` yang tidak terdaftar di tabel master `pelamar` lama).
+   * **Fase 5 (`rapor_siswa`)**: Ditemukan **1 baris** dengan komentar dummy bawaan database lama di kolom `final_result` pada Siswa ID `244` (Jadwal ID `17`) berupa teks: `"cobak ubah cobak ubah..."`.
+4. **Verifikasi Output CSV**: Seluruh 32 file CSV di folder [cek_csv](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/cek_csv/) berhasil diperbarui secara utuh dan terverifikasi bersih dari tipe data desimal `.0` pada seluruh kolom ID/FK.
+
+---
+
+### 🟢 Update 3 Juli 2026 (Pagi): Resolusi Siswa Keluar Hilang & Pembaruan Skema Database Baru
 
 Telah diselesaikan masalah hilangnya 47 data siswa yang berstatus keluar (non-aktif) di database baru melalui penelusuran relasi dan sinkronisasi skema:
 1. **Investigasi & Validasi Data**:
