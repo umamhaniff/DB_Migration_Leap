@@ -59,6 +59,11 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
    * **Git Untracking**: Menghapus laporan audit dari pemantauan Git (`git rm --cached`) untuk menjaga agar folder `extract/` tetap bersih dan lokal, namun tetap menyimpan skrip pemindai di folder `scratch/`.
 8. **Penyelidikan Siswa Keluar Hilang & DB Schema Patch (3 Juli 2026)**:
    * **Audit Mismatch Nama**: Menyelidiki 47 nama siswa keluar yang dilaporkan hilang oleh PM. Menemukan bahwa data mereka lengkap di DB Old (`keluar = 1.0` dan log di `siswa_keluar`), namun gagal ter-insert karena database target baru (`dataleap_v5_migration`) belum di-patch skema terbarunya.
-   * **Database Patcher**: Sukses mengeksekusi `config.gemini/patch_db_schema.py` untuk menambahkan kolom `status_pendaftaran` di tabel `siswa`, `status_lulus` di `kursus_siswa`, dan alter kolom lainnya yang dibutuhkan.
+   * **Database Patcher**: Sukses mengeksekusi `config.gemini/patch_db_schema.py` untuk menambahkan kolom `status_pendaftaran` di tabel `siswa`, `status_lulus` di `kursus_siswa`, and alter kolom lainnya yang dibutuhkan.
    * **Regenerasi Notebook**: Menjalankan ulang notebook `fase_4/script_hanif.ipynb` untuk memperbarui pickle `fase_4_hanif.pkl` secara bersih dengan status ✅ OK.
    * **Insert Handler Restoration**: Memulihkan file `fase_4/insert_handler.ipynb` milik teman agar kembali bersih tanpa modifikasi lokal.
+9. **Eksekusi Ulang & Validasi Akhir Fase 3 - 5 (3 Juli 2026 - Sore)**:
+   * **Notebook Runs**: Menjalankan ulang notebook `script_hanif.ipynb` Fase 3, 4, dan 5 secara penuh dengan sukses (0 error).
+   * **Pickle Verification**: Mengonfirmasi kepatuhan skema dan data menggunakan `test_migration_pickles.py` dengan status **Passed**.
+   * **Null Constraint Check**: Memverifikasi bahwa 12 baris dengan `id_pelamar` NULL di `rekrutmen_pelamar` aman untuk di-insert karena kolom tersebut nullable di database baru.
+   * **Git Sync**: Melakukan commit dan sync (push) seluruh files di Git repository secara bersih (termasuk folder `scratch/`, notebooks, dan file `.pkl`).
