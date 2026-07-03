@@ -48,6 +48,12 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
    * **Fase 5 (Explicit ID & PK Exclusion)**: 
      * Memetakan foreign key di tabel anak secara presisi menggunakan `file_id_map` hasil pemetaan in-memory.
      * Mengeluarkan kolom Primary Key (`id_rapor_siswa`, `id_rapor_siswa_file`, `id_rapor_lacak`) dari DataFrame di file Pickle agar sesuai dengan spesifikasi insert handler yang mengandalkan `AUTO_INCREMENT` MySQL (lulus uji di `test_migration_pickles.py`).
-   * **Audit Data Cleaning**:
+   * **Audit Data Cleaning (29 Juni 2026)**:
      * Melakukan pemindaian otomatis terhadap nilai placeholder dan anomali di Fase 3, 4, dan 5. Laporan lengkap ditulis di [laporan_pemeriksaan_cleaning.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/laporan_pemeriksaan_cleaning.md).
      * Ditemukan 2 anomali riil: Pelamar `64a4ddd6bea4320230705100454` dengan `nomor_wa` = `532453` (terlalu pendek), dan Siswa `S0000009` dengan `email` = `0`. Tindakan pembersihan ditangguhkan menunggu diskusi Hanif dengan PM.
+7. **Refined Audit Data Cleaning & Git Untracking (3 Juli 2026)**:
+   * **Saringan Bersih (No False Positive)**: Mengoptimalkan regex pemindai data cleaning untuk mengecualikan tag HTML, nama panggilan Indonesia (seperti *Lala*, *Rara*, *Iin*), angka Romawi (kelas & RT/RW), serta singkatan media sosial (*ig*, *fb*, *yt*).
+   * **Fase 3**: Audit menghasilkan [fase3_anomalies_clean.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/fase3_anomalies_clean.md). Mengidentifikasi 14 anomali di `pengajuan_karyawan`, 312 di `pelamar` (termasuk tester internal & email internal), dan 5 di `progres_pelamar`.
+   * **Fase 4**: Audit menghasilkan [fase4_anomalies_clean.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/fase4_anomalies_clean.md). Mengidentifikasi 1867 data (mayoritas default WA/Tempat Lahir `-`), 19 alasan keluar dummy di `siswa_keluar`, dan 1 *minor note* di `mitra`.
+   * **Fase 5**: Audit menghasilkan [fase5_anomalies_clean.md](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/extract/fase5_anomalies_clean.md). Menemukan 6 path file dummy (`TRIAL01.jpeg`, `coba.jpeg`, etc.) di `rapor_siswa_file`.
+   * **Git Untracking**: Menghapus laporan audit dari pemantauan Git (`git rm --cached`) untuk menjaga agar folder `extract/` tetap bersih dan lokal, namun tetap menyimpan skrip pemindai di folder `scratch/`.
