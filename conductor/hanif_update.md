@@ -9,6 +9,24 @@ Dokumen ini berfungsi khusus sebagai **catatan kronologis perkembangan, rincian 
 
 ## 📈 Jurnal Pembaruan Kronologis
 
+### 🟢 Update 7 Juli 2026 (Sore): Penyelesaian `questions.md`, Sinkronisasi ID Offset, dan Penanganan Manual 47 Siswa Keluar
+
+Telah diselesaikan masalah ketidaksesuaian ID Offset siswa serta integrasi data 47 siswa keluar yang sebelumnya terlewat menggunakan pendekatan pemetaan offline dan reset database:
+1. **Penyusunan CSV Terstruktur**:
+   * Memindahkan daftar 47 siswa dari format tabel markdown di `questions.md` ke berkas data terstruktur [daftar_siswa_keluar.csv](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_4/daftar_siswa_keluar.csv) di folder `fase_4`.
+2. **Pembaruan Pipeline & Pemetaan Kursus**:
+   * Mengupdate [apply_migration_updates.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/apply_migration_updates.py) untuk menyuntikkan manual course mapping ke `kursus_siswa` dan `siswa_keluar` untuk 47 siswa tersebut secara otomatis dari file CSV.
+   * Memetakan siswa B2B **SHAQUEENA NAUREEN** secara manual ke kode mitra `'M00029'` (sehingga mendapat `id_mitra = 21` / Mitra CC Convo Mj) agar datanya sinkron dengan tabel mitra.
+3. **Resolusi ID Offset (Reset Auto-Increment)**:
+   * Mengeksekusi script [reset_db_siswa.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/reset_db_siswa.py) untuk membersihkan tabel `siswa` beserta seluruh tabel anak, kemudian menyetel ulang nilai `AUTO_INCREMENT` kembali ke `1` pada database target baru (`dataleap_v5_migration`).
+   * Menginsert ulang data master `tag_siswa_keluar` dari `fase_1_hanif.pkl` ke database target.
+4. **Eksekusi & Validasi Akhir**:
+   * Menjalankan kembali seluruh notebook transformasi dari Fase 1-5 untuk menyegarkan file Pickle (`.pkl`).
+   * Mengeksekusi insert handler Fase 4 secara aman dengan mengarahkan output ke berkas [temp_insert_handler.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/temp_insert_handler.ipynb) agar file handler asli `fase_4/insert_handler.ipynb` di Git tetap 100% bersih tanpa modifikasi lokal.
+   * **Hasil Akhir**: 47/47 data siswa berhasil ter-insert secara lengkap dan sinkron (0 mismatch).
+
+---
+
 ### 🟢 Update 3 Juli 2026 (Sore): Eksekusi Ulang Sukses Fase 3 - 5 & Audit Kepatuhan Data
 
 Telah dilakukan eksekusi ulang secara menyeluruh terhadap notebook Jupyter Fase 3 hingga Fase 5 dan validasi kualitas data secara independen:
