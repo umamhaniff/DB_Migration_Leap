@@ -673,6 +673,9 @@ if 'siswa' in raw_data:
     df_mitra_raw = df_mitra_raw.sort_values(by=['_sort_key', 'idmitra']).reset_index(drop=True)
     mitra_id_map = dict(zip(df_mitra_raw['idmitra'], df_mitra_raw.index + 1))
 
+    # For SHAQUEENA NAUREEN, set idmitra to 'M00029' so it gets mapped to ID 21 (CC Mitra / Miss Tata)
+    df.loc[df['idsiswa'] == 'S0000351', 'idmitra'] = 'M00029'
+
     # ponytail: map id_mitra using the dynamic in-memory mitra_id_map
     df['id_mitra'] = df['idmitra'].map(mitra_id_map).astype('Int64')
 
@@ -896,6 +899,60 @@ if not df_ks_raw.empty:
 
     # ponytail: drop orphan K00017 — tidak ada di tabel kursus db_new (dihapus Afrida)
     df_ks_raw = df_ks_raw[df_ks_raw['id_kursus'] != 'K00017'].reset_index(drop=True)
+
+    # ponytail: append manual exit students from CSV in fase_4
+    import os
+    csv_path = 'daftar_siswa_keluar.csv'
+    if os.path.exists(csv_path):
+        df_manual = pd.read_csv(csv_path)
+        df_siswa_raw = pd.DataFrame(raw_data['siswa'])
+        df_siswa_raw['nama_clean'] = df_siswa_raw['nama_lengkap'].str.lower().str.strip()
+        name_to_old_id = dict(zip(df_siswa_raw['nama_clean'], df_siswa_raw['idsiswa']))
+        
+        # Course name to ID mapping (from db_new courses)
+        cursor_new.execute("SELECT id_kursus, nama_kursus FROM kursus")
+        db_courses = cursor_new.fetchall()
+        course_name_to_id = {clean_wil_name(c['nama_kursus']): c['id_kursus'] for c in db_courses}
+        
+        special_course_map = {
+            clean_wil_name("Kemitraan - B2B TK Mitra"): "K00021",
+            clean_wil_name("Kemitraan - B2B CC Mitra"): "K00022",
+            clean_wil_name("LEAP - Leap Literacy Club"): "K00003",
+            clean_wil_name("LEAP - Conversation Class"): "K00004",
+            clean_wil_name("LEAP - General English 2024"): "K00010",
+            clean_wil_name("LEAP - General English"): "K00001",
+        }
+        course_name_to_id.update(special_course_map)
+        
+        manual_ks_rows = []
+        for _, row in df_manual.iterrows():
+            name_clean = str(row['nama_lengkap']).lower().strip()
+            old_id = name_to_old_id.get(name_clean)
+            if not old_id:
+                for n, oid in name_to_old_id.items():
+                    if name_clean in n or n in name_clean:
+                        old_id = oid
+                        break
+            if old_id:
+                new_id = student_id_map.get(old_id)
+                norm_c = clean_wil_name(row['kursus'])
+                course_id = course_name_to_id.get(norm_c)
+                if new_id and course_id:
+                    tgl_daftar_val = df_siswa_raw[df_siswa_raw['idsiswa'] == old_id]['tgl_daftar'].values
+                    tgl_mulai = parse_date_f4(tgl_daftar_val[0]) if len(tgl_daftar_val) > 0 else None
+                    manual_ks_rows.append({
+                        'id_siswa': new_id,
+                        'id_kursus': course_id,
+                        'tanggal_mulai': tgl_mulai,
+                        'metode_belajar': 'Offline',
+                        'status_aktif': 0,
+                        'status_lulus': 0,
+                        'catatan': 'Manual input dari daftar siswa keluar csv'
+                    })
+        if manual_ks_rows:
+            df_manual_ks = pd.DataFrame(manual_ks_rows)
+            df_ks_raw = pd.concat([df_ks_raw, df_manual_ks], ignore_index=True)
+            df_ks_raw = df_ks_raw.groupby(['id_siswa', 'id_kursus'], as_index=False).first()
 
     df_ks_raw['tanggal_mulai'] = df_ks_raw['tanggal_mulai'].apply(parse_date_f4)
     

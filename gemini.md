@@ -67,3 +67,15 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
    * **Pickle Verification**: Mengonfirmasi kepatuhan skema dan data menggunakan `test_migration_pickles.py` dengan status **Passed**.
    * **Null Constraint Check**: Memverifikasi bahwa 12 baris dengan `id_pelamar` NULL di `rekrutmen_pelamar` aman untuk di-insert karena kolom tersebut nullable di database baru.
    * **Git Sync**: Melakukan commit dan sync (push) seluruh files di Git repository secara bersih (termasuk folder `scratch/`, notebooks, dan file `.pkl`).
+10. **Penyelesaian questions.md & Sinkronisasi ID Offset (7 Juli 2026)**:
+    * **Penyusunan CSV**: Memindahkan daftar siswa dari tabel markdown `questions.md` ke berkas data terstruktur [daftar_siswa_keluar.csv](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/fase_4/daftar_siswa_keluar.csv) di folder `fase_4`.
+    * **Modifikasi Pipeline**:
+      - Mengupdate [apply_migration_updates.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/apply_migration_updates.py) untuk menyuntikkan manual course mapping ke `kursus_siswa` dan `siswa_keluar` untuk 47 siswa tersebut.
+      - Memetakan B2B student **SHAQUEENA NAUREEN** ke kode mitra `'M00029'` (sehingga mendapat `id_mitra = 21` / Mitra CC Convo Mj).
+    * **Perbaikan ID Offset (Opsi 1)**:
+      - Menjalankan script [reset_db_siswa.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/reset_db_siswa.py) untuk mengosongkan tabel `siswa` dan turunannya serta mereset `AUTO_INCREMENT` kembali ke 1.
+      - Memasukkan master data `tag_siswa_keluar` dari `fase_1_hanif.pkl` ke database target.
+    * **Eksekusi Aman**:
+      - Menjalankan kembali notebook transformasi Fase 1-5 untuk memperbarui semua pickle file.
+      - Mengeksekusi insert handler `fase_4/insert_handler.ipynb` secara aman dengan mengarahkan output ke [temp_insert_handler.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/temp_insert_handler.ipynb) agar file asli di Git tetap bersih 100%.
+      - **Hasil**: 47/47 siswa berhasil dimasukkan dengan lengkap dan sinkron (0 mismatch).
