@@ -9,6 +9,22 @@ Dokumen ini berfungsi khusus sebagai **catatan kronologis perkembangan, rincian 
 
 ## 📈 Jurnal Pembaruan Kronologis
 
+### 🟢 Update 9 Juli 2026 (Sore): Resolusi Duplikasi Email Pelamar (192 Baris) & Custom Shortening Teks WFO
+
+Telah diselesaikan kendala ter-skip-nya data pelamar akibat constraint `UNIQUE` email dan data truncation pada kolom `wfo` (siap_wfo) di database target:
+1. **Drop Indeks UNIQUE Email**:
+   * Melakukan drop indeks unique `pelamar_email_pelamar_unique` pada database target `db_new.pelamar` agar semua riwayat lamaran yang dikirim (192 baris) dapat di-insert secara utuh dan independen tanpa ada peleburan profile.
+   * Modifikasi ini telah ditambahkan secara permanen ke dalam script database patching [config.gemini/patch_db_schema.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/patch_db_schema.py).
+2. **Pemendekan Kalimat WFO (siap_wfo)**:
+   * Menganalisis 50 entri kolom `wfo` yang melebihi batas 50 karakter target kolom `siap_wfo` dan menyusun pemetaan singkat (`WFO_CLEAN_MAP`) di [apply_migration_updates.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/apply_migration_updates.py).
+   * Nilai dipotong secara semantik sehingga tetap mempertahankan esensi asli masing-masing pelamar namun tetap muat dalam batas 50 karakter target database.
+3. **Eksekusi & Validasi Akhir**:
+   * Menjalankan ulang notebook transformasi Fase 3 untuk memperbarui pickle `fase_3_hanif.pkl` secara bersih.
+   * Menjalankan reset pada tabel pelamar dan mengeksekusi insert handler Fase 3 via [execute_fase_3_insert_handler_safely.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/execute_fase_3_insert_handler_safely.py).
+   * **Hasil Akhir**: **192 / 192 baris pelamar** sukses masuk 100% tanpa warning, dan seluruh relasi tabel anak (`pelamar_kerja`, `pelamar_sekolah`, `pelamar_kursus`, `progres_pelamar`, `rekrutmen_pelamar`) ter-insert secara sempurna dan sinkron.
+
+---
+
 ### 🟢 Update 7 Juli 2026 (Sore): Penyelesaian `questions.md`, Sinkronisasi ID Offset, dan Penanganan Manual 47 Siswa Keluar
 
 Telah diselesaikan masalah ketidaksesuaian ID Offset siswa serta integrasi data 47 siswa keluar yang sebelumnya terlewat menggunakan pendekatan pemetaan offline dan reset database:
