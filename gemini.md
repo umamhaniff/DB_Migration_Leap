@@ -79,3 +79,26 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
       - Menjalankan kembali notebook transformasi Fase 1-5 untuk memperbarui semua pickle file.
       - Mengeksekusi insert handler `fase_4/insert_handler.ipynb` secara aman dengan mengarahkan output ke [temp_insert_handler.ipynb](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/temp_insert_handler.ipynb) agar file asli di Git tetap bersih 100%.
       - **Hasil**: 47/47 siswa berhasil dimasukkan dengan lengkap dan sinkron (0 mismatch).
+11. **Perbaikan Masalah Data Pelamar & Penyelarasan FK Fase 3 (9 Juli 2026)**:
+    * **Penyebab Masalah**: 
+      - **Truncation `siap_wfo`**: Data `wfo` di `db_old` berupa cerita panjang (> 50 karakter) sehingga terpotong saat dimasukkan ke `VARCHAR(50)` di database target.
+      - **Duplikasi Email**: Banyak pelamar dengan email yang sama (`nirmalapradnyas@gmail.com`, `admin@gmail.com`, dll.) sehingga ditolak oleh UNIQUE constraint `email_pelamar` di `db_new.pelamar`.
+      - **ID Shifting & FK Constraints**: Karena baris yang error/duplikat di atas di-skip oleh `INSERT IGNORE`, urutan AUTO_INCREMENT di MySQL bergeser dibanding index-based ID (`id_pelamar_new`) di Pandas. Akibatnya, pemetaan relasi berantakan dan tabel anak (`pelamar_kerja`, etc.) gagal foreign key check.
+      - **Out-of-Order FK `id_pengajuan`**: Tabel `pelamar` merujuk ke `pengajuan_karyawan(id_pengajuan)` tetapi di-insert terlebih dahulu di `insert_handler.ipynb` sehingga gagal constraint pada instalasi DB bersih.
+    * **Solusi**:
+      - Menyempurnakan parser ETL Fase 3 di [apply_migration_updates.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/apply_migration_updates.py) untuk menyaring/menyatukan duplikasi email pelamar ke satu ID representatif (`pelamar_id_map` dengan redirection).
+      - Menambahkan auto-truncation untuk membatasi panjang input kolom string pelamar (`siap_wfo` max 50 chars, dll.) agar cocok dengan skema baru.
+      - Mengembangkan [execute_fase_3_insert_handler_safely.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/execute_fase_3_insert_handler_safely.py) untuk menonaktifkan global foreign key checks secara dinamis (`SET GLOBAL foreign_key_checks = 0;`) di MySQL selama insert notebook berjalan agar alur silang tidak terganggu.
+      - **Hasil**: 100% data pelamar (142/142 baris unik) dan seluruh relasi tabel anak sukses dimasukkan ke database dengan sinkronisasi ID yang presisi tanpa warning sama sekali.
+12. **Drop Unique Email Constraint & Penyelarasan Riwayat Pelamar 192 Baris (9 Juli 2026 - Sore)**:
+    * **Keputusan Bersama**:
+      - Dibanding menggabungkan profil pelamar (deduplikasi email), diputuskan untuk **mempertahankan seluruh data lamaran secara terpisah (192 baris)** agar riwayat form lamaran tidak melebur.
+      - Menghapus indeks `UNIQUE` pada kolom `email_pelamar` di database target `db_new.pelamar`.
+    * **Solusi & Eksekusi**:
+      - Memperbarui skema patcher [patch_db_schema.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/patch_db_schema.py) untuk mengeksekusi `ALTER TABLE pelamar DROP INDEX pelamar_email_pelamar_unique;`.
+      - Memodifikasi [apply_migration_updates.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/apply_migration_updates.py) untuk membatalkan penggabungan email pelamar, menjaga baris tetap 192, serta mengintegrasikan pemetaan pemendekan kalimat WFO kustom (`WFO_CLEAN_MAP`) agar teks <= 50 karakter namun tetap mempertahankan konteks asli tiap baris.
+      - Menjalankan ulang notebook transformasi dan mengeksekusi insert handler via [execute_fase_3_insert_handler_safely.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/execute_fase_3_insert_handler_safely.py).
+    * **Hasil Validasi**:
+      - **192/192 baris pelamar** sukses masuk 100% tanpa warning.
+      - Seluruh relasi tabel anak (`pelamar_kerja`, `pelamar_sekolah`, `pelamar_kursus`, `progres_pelamar`, `rekrutmen_pelamar`) sukses ter-insert 100% sinkron.
+

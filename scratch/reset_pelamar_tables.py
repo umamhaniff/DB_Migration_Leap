@@ -15,18 +15,23 @@ def main():
         'pelamar_sekolah',
         'pelamar_kursus',
         'progres_pelamar',
-        'rekrutmen_pelamar'
+        'rekrutmen_pelamar',
+        'pelamar'
     ]
     
+    print("Disabling foreign key checks...")
+    cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+    
     for table in tables:
-        print(f"\n=== Create Table Schema for {table} ===")
-        try:
-            cursor.execute(f"SHOW CREATE TABLE `{table}`")
-            print(cursor.fetchone()[1])
-        except Exception as e:
-            print(f"Error: {e}")
-            
+        print(f"Truncating table {table}...")
+        cursor.execute(f"TRUNCATE TABLE `{table}`")
+        
+    print("Enabling foreign key checks...")
+    cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+    
+    conn.commit()
     conn.close()
+    print("Truncation and reset completed successfully!")
 
 if __name__ == '__main__':
     main()

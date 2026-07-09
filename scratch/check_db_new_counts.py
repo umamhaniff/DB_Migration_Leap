@@ -1,28 +1,29 @@
 import sys
 import os
-import mysql.connector
-
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import mysql.connector
 from config import get_db_config
 
 def main():
     cfg = get_db_config()
-    conn_new = mysql.connector.connect(**cfg['db_new'])
-    cursor_new = conn_new.cursor(dictionary=True)
+    conn = mysql.connector.connect(**cfg['db_new'])
+    cursor = conn.cursor()
     
-    cursor_new.execute("SHOW TABLES")
-    tables = [list(row.values())[0] for row in cursor_new.fetchall()]
-    print(f"Total tables in new DB: {len(tables)}")
+    cursor.execute("SHOW TABLES")
+    tables = [r[0] for r in cursor.fetchall()]
     
-    for tbl in sorted(tables):
-        cursor_new.execute(f"SELECT COUNT(*) as cnt FROM `{tbl}`")
-        cnt = cursor_new.fetchone()['cnt']
-        if cnt > 0:
-            print(f"Table `{tbl}`: {cnt} rows")
-        else:
-            print(f"Table `{tbl}`: EMPTY")
+    print("=== Row counts in db_new ===")
+    for table in tables:
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM `{table}`")
+            count = cursor.fetchone()[0]
+            if count > 0 or table in ['pelamar', 'pengajuan_karyawan', 'histori_pengajuan']:
+                print(f"Table {table}: {count} rows")
+        except Exception as e:
+            print(f"Table {table}: Error: {e}")
             
-    conn_new.close()
+    conn.close()
 
 if __name__ == '__main__':
     main()

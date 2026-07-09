@@ -11,6 +11,7 @@ def main():
     cursor = conn.cursor()
     
     tables = [
+        'pelamar',
         'pelamar_kerja',
         'pelamar_sekolah',
         'pelamar_kursus',
@@ -18,14 +19,12 @@ def main():
         'rekrutmen_pelamar'
     ]
     
+    print("=== Row counts in db_new ===")
     for table in tables:
-        print(f"\n=== Create Table Schema for {table} ===")
-        try:
-            cursor.execute(f"SHOW CREATE TABLE `{table}`")
-            print(cursor.fetchone()[1])
-        except Exception as e:
-            print(f"Error: {e}")
-            
+        cursor.execute(f"SELECT COUNT(*) FROM `{table}`")
+        count = cursor.fetchone()[0]
+        print(f"Table {table}: {count} rows")
+        
     conn.close()
 
 if __name__ == '__main__':

@@ -86,6 +86,16 @@ def apply_alterations():
         else:
             print(f"Alteration for {table}.{column} already applied or not applicable.")
             
+    # 11. Drop unique constraint on pelamar email if it exists
+    try:
+        cursor.execute("ALTER TABLE pelamar DROP INDEX pelamar_email_pelamar_unique;")
+        print("Executing: ALTER TABLE pelamar DROP INDEX pelamar_email_pelamar_unique;")
+    except mysql.connector.Error as err:
+        if err.errno == 1091:
+            print("Alteration for pelamar.pelamar_email_pelamar_unique already applied or not applicable.")
+        else:
+            print(f"Error dropping unique index on pelamar: {err}")
+            
     conn.commit()
     cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
     conn.close()
