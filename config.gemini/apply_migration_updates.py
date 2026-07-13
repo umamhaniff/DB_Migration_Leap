@@ -1030,10 +1030,16 @@ if not df_ks_raw.empty:
         return 'Offline'
     df_ks_raw['metode_belajar'] = df_ks_raw['metode_belajar'].apply(map_metode)
     
-    # Map status_aktif and status_lulus
-    df_ks_raw['status_aktif'] = df_ks_raw['is_keluar'].apply(lambda x: 0 if pd.notna(x) and float(x) > 0 else 1).astype('Int64')
-    df_ks_raw['status_lulus'] = df_ks_raw['is_lulus'].apply(lambda x: 1 if pd.notna(x) and float(x) > 0 else 0).astype('Int64')
-    df_ks_raw['catatan'] = None
+    # Map status_aktif and status_lulus (preserve existing manual entries if present)
+    df_ks_raw['status_aktif'] = df_ks_raw.apply(
+        lambda row: row['status_aktif'] if ('status_aktif' in row and pd.notna(row['status_aktif'])) else (0 if pd.notna(row.get('is_keluar')) and float(row['is_keluar']) > 0 else 1),
+        axis=1
+    ).astype('Int64')
+    df_ks_raw['status_lulus'] = df_ks_raw.apply(
+        lambda row: row['status_lulus'] if ('status_lulus' in row and pd.notna(row['status_lulus'])) else (1 if pd.notna(row.get('is_lulus')) and float(row['is_lulus']) > 0 else 0),
+        axis=1
+    ).astype('Int64')
+    df_ks_raw['catatan'] = df_ks_raw['catatan'].where(df_ks_raw['catatan'].notna(), None) if 'catatan' in df_ks_raw.columns else None
     
     # Reassign id_kursus_siswa sequentially from 1
     df_ks_raw = df_ks_raw.reset_index(drop=True)

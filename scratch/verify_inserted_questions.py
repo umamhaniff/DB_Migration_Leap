@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from config import get_db_config
-from scratch.generate_audit_report import parse_questions_md
+from scratch.investigate_questions import parse_questions_md
 
 def main():
     students = parse_questions_md()

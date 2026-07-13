@@ -101,4 +101,11 @@ Proyek ini adalah migrasi database terstruktur dari database versi lama (`datale
     * **Hasil Validasi**:
       - **192/192 baris pelamar** sukses masuk 100% tanpa warning.
       - Seluruh relasi tabel anak (`pelamar_kerja`, `pelamar_sekolah`, `pelamar_kursus`, `progres_pelamar`, `rekrutmen_pelamar`) sukses ter-insert 100% sinkron.
+13. **Penyelarasan status_aktif & catatan untuk 47 Siswa Keluar Manual (13 Juli 2026)**:
+    * **Penyebab Masalah**: 47 siswa manual yang dimasukkan dari `questions.md`/`daftar_siswa_keluar.csv` tidak memiliki riwayat jadwal di database lama. Akibatnya, `status_aktif` di tabel `kursus_siswa` ter-overwrite menjadi `1` (Active) karena kalkulasi default fallback `is_keluar` bernilai NaN/null, serta kolom `catatan` ter-overwrite menjadi `None`.
+    * **Solusi & Eksekusi**:
+      - Memperbarui logic transformasi di [apply_migration_updates.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/config.gemini/apply_migration_updates.py) agar mempertahankan nilai `status_aktif` (value `0` / Non-aktif) dan kolom `catatan` yang sudah di-set manual sebelumnya.
+      - Menjalankan ulang notebook transformasi Fase 1-5 menggunakan [run_all_notebooks.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/run_all_notebooks.py) dan mengeksekusi insert handler Fase 4 secara bersih menggunakan [execute_insert_handler_safely.py](file:///D:/_CampusLife/ProjectCampus/6Magang/db_migration_leap/scratch/execute_insert_handler_safely.py).
+    * **Hasil Validasi**: 100% siswa keluar manual sukses di-insert dengan `status_aktif` = `0` (Non-aktif) dan `catatan` = `'Manual input dari daftar siswa keluar csv'` di tabel `kursus_siswa` di database `db_new`.
+
 
